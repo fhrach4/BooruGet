@@ -19,22 +19,15 @@ numthreads = 0
 
 platform = platform.system()
 
-arguments = []
+arguments = [""]
 
-NSFW_BLACKLIST = ["ass", "assymmetrical_docking", "cameltoe", "cleavage",
-    "cum", "cum_on_face", "cum_on_breasts" , "erect_nipples", "futanari",
-    "garter_belt", "giantess", "lingere", "nipples", "panties", "penis",
-    "pussy", "sex", "symmetrical_docking", "undressing", "underwear", "yuri",
-    "wardrobe_malfunction"]
+NSFW_BLACKLIST = [""]
 
-GLOBAL_BLACKLIST = ["bestiality", "gore", "pee", "penis", "urine"]
+GLOBAL_BLACKLIST = [""]
 
-MD5_NSFW_BLACKLIST = ["780a802e55b88d0f6ce08cf9a14a42d3",
-    "3becc66befdbfe9585b4d8d729c56813", "4436aed96caea9df8a58464b5b1a5e04",
-    "c7a8dc55f55e5e6c1174f3999292c2a5", "624540f4f15c75bd10cc293fb33bb896g",
-    "87cbe547d4f3d4c42054bc44bbad9f4e"]
+MD5_NSFW_BLACKLIST = [""]
 
-MD5_GLOBAL_BLACKLIST = [ "1cdc6843642ad8f44f297b4351bb64fa", "ed3ab7173f09e357ef82df70b4a8e853.jpeg" ]
+MD5_GLOBAL_BLACKLIST = [""]
 
 MD5_NSFW_WHITELISTLIST = [""]
 
@@ -236,8 +229,19 @@ def filterResult( result, tWidth, tHeight, error ):
     blacklisedTag = "None"
     globalBlacklistedTag = "None"
 
+    # calculate the ratio
+    ratio = width / float(height)
+    tratio = tWidth/ float(tHeight)
+
+    maxRatio = tratio + tratio * error
+    minRatio = tratio - tratio * error
+
     # check if the width and height are acceptable
-    if width <= maxWidth and width >= minWidth and height <= maxHeight and height >= minHeight:
+    #if width <= maxWidth and width >= minWidth and height <= maxHeight and height >= minHeight:
+    if ratio >= minRatio and ratio <= maxRatio:
+        if (width <= minWidth and  height <= minHeight) or arguments.anysize:
+            fail = True
+            # TODO maybe add verbose message for failed size check
 
         # if nfsw is not allowed, check the tag blacklist
         if arguments.nsfw == False:
@@ -323,9 +327,45 @@ def downloadImage( url, location ):
     call(["wget","-q", "-N", "-P" + location, url ])
     numthreads -= 1
 
+def loadBlackAndWhiteLists():
+    global arguments
+    global NSFW_BLACKLIST
+    global GLOBAL_BLACKLIST
+    global MD5_NSFW_BLACKLIST
+    global MD5_GLOBAL_BLACKLIST
+    global MD5_NSFW_WHITELISTLIST
+    global MD5_GLOBAL_WHITELISTLIST
+
+    # list of al the blacklist/whitelist files. Each one corrisponds with
+    # it's data structure equivalent
+    files = [ ".nsfw_blacklist", ".global_blacklist", ".md5_nsfw_blacklist",
+        ".md5_global_blacklist", ".md5_nsfw_whitelist", ".md5_global_whitelist" ]
+    structs = [ NSFW_BLACKLIST, GLOBAL_BLACKLIST, MD5_NSFW_BLACKLIST,
+        MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST, MD5_GLOBAL_WHITELISTLIST ]
+
+    for i in range( len(files) - 1 ):
+
+        # if the file does not exist, create it
+        if not os.path.exists(files[i]):
+            f = open(files[i], "w" )
+            f.write('')
+            f.close()
+
+        # then try and load the contents of the file
+        try:
+            f = open( files[i])
+            for line in f:
+                structs[i].append( str(line) )
+            f.close()
+            if arguments.verbose:
+                print structs[i]
+        except:
+            print "Error opening " + files[i]
+
 def handleArguments():
     global arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--anysize", help = "Allow any sized image (default is to only allow images equal to or larger than the specified screen size", action="store_true" )
     parser.add_argument("-u", "--username", help = "The username you use to log into danbooru")
     parser.add_argument("-k", "--apikey", help = "Your api key (can be found on your user page")
     parser.add_argument("-w", "--width", help = "the width of your screen in pixels", type=int)
@@ -340,25 +380,21 @@ def handleArguments():
 
 def main():
     global arguments
+    loadBlackAndWhiteLists()
     handleArguments()
-
     if arguments.verbose:
         print arguments
-
     search = arguments.search
     width = arguments.width
     height = arguments.height
     error = arguments.error
     username = arguments.username
     apikey = arguments.apikey
-
     if not arguments.downloadonly:
         threading.Thread(target=changewallpaper, args=[search]).start()
-
     if not arguments.localonly:
         print "Starting downloads"
         threading.Thread(target=downloadGel, args=[search, width, height, error] ).start()
         downloadDan( search, width, height, error, username, apikey )
-    #downloadGel( search, width, height, error )
 
 main()
