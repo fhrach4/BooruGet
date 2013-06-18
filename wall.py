@@ -20,14 +20,14 @@ writeLock = False
 
 platform = platform.system()
 
-arguments = [""]
-NSFW_BLACKLIST = [""]
-GLOBAL_BLACKLIST = [""]
-MD5_NSFW_BLACKLIST = [""]
-MD5_GLOBAL_BLACKLIST = [""]
-MD5_NSFW_WHITELISTLIST = [""]
-MD5_GLOBAL_WHITELISTLIST = [""]
-NSFW_MD5 = [""]
+arguments = []
+NSFW_BLACKLIST = []
+GLOBAL_BLACKLIST = []
+MD5_NSFW_BLACKLIST = []
+MD5_GLOBAL_BLACKLIST = []
+MD5_NSFW_WHITELISTLIST = []
+MD5_GLOBAL_WHITELISTLIST = []
+NSFW_MD5 = []
 
 def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
 
@@ -227,12 +227,12 @@ def filterResult( result, tWidth, tHeight, error ):
     maxHeight = tHeight + tHeight * error
 
     fail = False
-    nsfw = False
+    mark_nsfw = False
     md5_Fail = False
     md5_Global_Fail = False
     md5_Pass = False
-    blacklistedTag = ""
-    globalBlacklistedTag = ""
+    blacklistedTag = []
+    globalBlacklistedTag = []
 
     # calculate the ratio
     ratio = width / float(height)
@@ -253,8 +253,8 @@ def filterResult( result, tWidth, tHeight, error ):
             if tag in tagString:
                 if not arguments.nsfw:
                     fail = True
-                nsfw = True
-                blacklistedTag = blacklistedTag + tag +", "
+                mark_nsfw = True
+                blacklistedTag.append( tag )
 
         # check if md5 is blacklisted
         if md5 in MD5_NSFW_BLACKLIST and arguments.nsfw == False:
@@ -270,7 +270,7 @@ def filterResult( result, tWidth, tHeight, error ):
         for tag in GLOBAL_BLACKLIST:
             if tag in tagString:
                 fail = True
-                globalBlacklistedTag = globalBlacklistedTag + tag + ", "
+                globalBlacklistedTag.append( tag )
 
         # check if md5 is in the md5 whitelist
         if md5 in MD5_NSFW_WHITELISTLIST:
@@ -286,13 +286,18 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
-                print "\tContained blacklisted tag: " + blacklistedTag
-                print "\tContained global blacklisted tag: " + globalBlacklistedTag
-                print "\tWidth: " + str(width)
-                print "\tHeight: " + str(height)
-                print "\tRatio: " + str(ratio)
+                print "\tContained blacklisted tag: " + str(blacklistedTag)
+                print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
+                print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
+                print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
+                print "\tRatio: " + str(ratio) + "(minimum: " + str(minRatio)\
+                    + " maximum: " + str(maxRatio) + ")"
                 print "\tnsfw allowed: " + str(arguments.nsfw)
-                print "\tTag String: " + str(tString)
+                try:
+                    print "\tTag String: " + str(tString)
+                except( UnicodeEncodeError):
+                    pass
+
 
             # if the rating is not s and it is not already marked as nsfw,
             # mark as nsfw
@@ -311,7 +316,7 @@ def filterResult( result, tWidth, tHeight, error ):
                     print "\t\tdone"
             # otherwise go through each tag. If the tag is recognized as nsfw
             # mark the image as nsfw
-            elif nsfw and (not str(md5) in NSFW_MD5):
+            elif mark_nsfw and (not str(md5) in NSFW_MD5):
                 if arguments.verbose:
                     print "\t\tmarking as nsfw"
                 NSFW_MD5.append(str(md5))
@@ -335,13 +340,17 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
-                print "\tContained blacklisted tag: " + blacklistedTag
-                print "\tContained global blacklisted tag: " + globalBlacklistedTag
-                print "\tWidth: " + str(width)
-                print "\tHeight: " + str(height)
-                print "\tRatio: " + str(ratio)
+                print "\tContained blacklisted tag: " + str(blacklistedTag)
+                print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
+                print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
+                print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
+                print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + " minimum: " + str(minRatio)\
+                    + " maximum: " + str(maxRatio) + ")"
                 print "\tnsfw allowed: " + str(arguments.nsfw)
-                print "\tTag String: " + str(tString)
+                try:
+                    print "\tTag String: " + str(tString)
+                except( UnicodeEncodeError):
+                    pass
                 return False
     else:
         if arguments.verbose:
