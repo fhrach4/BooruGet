@@ -8,7 +8,7 @@ import argparse
 import httplib2, urllib, hashlib
 import json
 import xml.etree.ElementTree as ET
-import threading, os, random, platform
+import threading, os, random, platform, sys
 import time
 import math
 
@@ -16,22 +16,18 @@ from subprocess import call
 
 threads= []
 numthreads = 0
+writeLock = False
 
 platform = platform.system()
 
 arguments = [""]
-
 NSFW_BLACKLIST = [""]
-
 GLOBAL_BLACKLIST = [""]
-
 MD5_NSFW_BLACKLIST = [""]
-
 MD5_GLOBAL_BLACKLIST = [""]
-
 MD5_NSFW_WHITELISTLIST = [""]
-
 MD5_GLOBAL_WHITELISTLIST = [""]
+NSFW_MD5 = [""]
 
 def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
 
@@ -61,6 +57,8 @@ def changewallpaper(tags):
     global arguments
     global platform
 
+    updateMD5BlackAndWhiteLists()
+
     change = True
     dirname = "/home/frank4/.test/" + tags
     if arguments.verbose:
@@ -84,17 +82,22 @@ def changewallpaper(tags):
 
             if arguments.verbose:
                 print "\tNext filename: " + fileName
-                print "\t" + md5
+                print "\tmd5: " + md5
 
             # if in the md5 nsfw blacklist remove the file
-            if (md5 in MD5_NSFW_BLACKLIST and not arguments.nsfw) or md5 in MD5_GLOBAL_BLACKLIST:
+            if md5 in MD5_GLOBAL_BLACKLIST or ( md5 in MD5_NSFW_WHITELISTLIST and arguments.nsfw ):
                 if arguments.verbose:
                     print "\tAttempting to remove file..."
                 os.remove(fileName)
                 change = False
                 if arguments.verbose:
-                    print "\tRemoved file because it was in md5 nsfw blacklist"
+                    print "\tRemoved file because it was blacklisted"
 
+            # if nsfw is off and image is marked as nsfw, try again
+            if (not arguments.nsfw) and md5 in NSFW_MD5:
+                if arguments.verbose:
+                    print "\tNSFW is on, trying again"
+                change = False
 
             # if the file was not removed from the directory change it
             # TODO handle different os and window managers
@@ -125,7 +128,7 @@ def downloadGel(searchString, tWidth, tHeight, error ):
     numPages = 1000
 
     root = getResultsXML(url, 1, numPerPage, searchString)
-    numPages = int(math.ceil( int(root.attrib["count"]) / 100.0 ))
+    numPages = int(math.ceil( int(root.attrib["count"]) / float(len(root) )))
 
     for i in range(1, numPages + 1):
         #TODO add try catch around this and other error handling
@@ -133,7 +136,7 @@ def downloadGel(searchString, tWidth, tHeight, error ):
         root = getResultsXML(url, i, numPerPage, searchString)
 
         if arguments.verbose:
-            print  "current page: " + str(i) + " (" + str(i * numPerPage) + ") out of " + root.attrib["count"] + " results (" + str(numPages) + " pages)"
+            print  "Gelbooru: current page: " + str(i) + " (" + str(i * numPerPage) + ") out of " + str(numPages) + " pages("+ root.attrib["count"] + ")"
 
         try:
             for child in root:
@@ -154,7 +157,7 @@ def downloadGel(searchString, tWidth, tHeight, error ):
                     t.start()
         except(IndexError):
             print "End of results"
-    print "Gelbooru: Finished"
+    print "Gelbooru: Finished searching"
 
 
 def downloadDan(searchString, tWidth, tHeight, error, login, key ):
@@ -168,7 +171,7 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
 
     for i in range(1,numPages + 1):
         if arguments.verbose:
-            print  "current page: " + str(i) + " (" + str(i * numPerPage) + ")"
+            print  "Danbooru: current page: " + str(i) + " of ~1000 (" + str(i * numPerPage) + ")"
         result = getResultsJSON(urlbase, i, numPerPage, searchString, login, key)
         if len(result) == 0:
             break
@@ -184,7 +187,7 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
                     #threads.append(t)
                     numthreads += 1
                     t.start()
-            except (IndexError, KeyError):
+            except (IndexError, KeyError, TypeError):
                 print "Less than 100 images in this result ("\
                 + str(len(result)) + ")"
                 i = numPages + 1
@@ -207,6 +210,7 @@ def filterResult( result, tWidth, tHeight, error ):
     returns ->  Boolean: True if the image should be downoaded otherwise false
     """
     global arguments
+    global writeLock
 
     # extract all relevant information from the dictionary
     md5 = result['md5']
@@ -223,11 +227,12 @@ def filterResult( result, tWidth, tHeight, error ):
     maxHeight = tHeight + tHeight * error
 
     fail = False
+    nsfw = False
     md5_Fail = False
     md5_Global_Fail = False
     md5_Pass = False
-    blacklisedTag = "None"
-    globalBlacklistedTag = "None"
+    blacklistedTag = ""
+    globalBlacklistedTag = ""
 
     # calculate the ratio
     ratio = width / float(height)
@@ -244,11 +249,12 @@ def filterResult( result, tWidth, tHeight, error ):
             # TODO maybe add verbose message for failed size check
 
         # if nfsw is not allowed, check the tag blacklist
-        if arguments.nsfw == False:
-            for tag in NSFW_BLACKLIST:
-                if tag in tagString:
+        for tag in NSFW_BLACKLIST:
+            if tag in tagString:
+                if not arguments.nsfw:
                     fail = True
-                    blacklisedTag = tag
+                nsfw = True
+                blacklistedTag = blacklistedTag + tag +", "
 
         # check if md5 is blacklisted
         if md5 in MD5_NSFW_BLACKLIST and arguments.nsfw == False:
@@ -260,11 +266,11 @@ def filterResult( result, tWidth, tHeight, error ):
             fail = True
             md5_Global_Fail = True
 
-        # if nsfw is allowed  or not allowed check the global blacklist
+        # if nsfw is allowed or not allowed check the global blacklist
         for tag in GLOBAL_BLACKLIST:
             if tag in tagString:
                 fail = True
-                blacklisedTag = tag
+                globalBlacklistedTag = globalBlacklistedTag + tag + ", "
 
         # check if md5 is in the md5 whitelist
         if md5 in MD5_NSFW_WHITELISTLIST:
@@ -280,11 +286,44 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
-                print "\tContained blacklisted tag: " + blacklisedTag
+                print "\tContained blacklisted tag: " + blacklistedTag
                 print "\tContained global blacklisted tag: " + globalBlacklistedTag
                 print "\tWidth: " + str(width)
                 print "\tHeight: " + str(height)
-                print "\tnsfw: " + str(arguments.nsfw)
+                print "\tRatio: " + str(ratio)
+                print "\tnsfw allowed: " + str(arguments.nsfw)
+                print "\tTag String: " + str(tString)
+
+            # if the rating is not s and it is not already marked as nsfw,
+            # mark as nsfw
+            if ( not rating == "s") and (not str(md5) in NSFW_MD5):
+                if arguments.verbose:
+                    print "\t\tmarking as nsfw"
+                NSFW_MD5.append(str(md5))
+                while writeLock:
+                    time.sleep(500)
+                writeLock = True
+                f = open("._nsfw_md5", "a+")
+                f.write( md5 + '\n' )
+                f.close()
+                writeLock = False
+                if arguments.verbose:
+                    print "\t\tdone"
+            # otherwise go through each tag. If the tag is recognized as nsfw
+            # mark the image as nsfw
+            elif nsfw and (not str(md5) in NSFW_MD5):
+                if arguments.verbose:
+                    print "\t\tmarking as nsfw"
+                NSFW_MD5.append(str(md5))
+                while writeLock:
+                    time.sleep(500)
+                writeLock = True
+                f = open("._nsfw_md5", "a+")
+                f.write( md5 + '\n' )
+                f.close()
+                writeLock = False
+                if arguments.verbose:
+                    print "\t\tdone"
             return True
         else:
             if arguments.verbose:
@@ -296,11 +335,13 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
-                print "\tContained blacklisted tag: " + blacklisedTag
+                print "\tContained blacklisted tag: " + blacklistedTag
                 print "\tContained global blacklisted tag: " + globalBlacklistedTag
                 print "\tWidth: " + str(width)
                 print "\tHeight: " + str(height)
-                print "\tnsfw: " + str(arguments.nsfw)
+                print "\tRatio: " + str(ratio)
+                print "\tnsfw allowed: " + str(arguments.nsfw)
+                print "\tTag String: " + str(tString)
                 return False
     else:
         if arguments.verbose:
@@ -313,7 +354,7 @@ def filterResult( result, tWidth, tHeight, error ):
             #print "\tincluded in md5 whitelist: " + str(md5_Pass)
             #print "\tincluded in md5 whitelist: " + str(md5_Pass)
             #print "\tfile extension: " + fExtension
-            #print "\tContained blacklisted tag: " + blacklisedTag
+            #print "\tContained blacklisted tag: " + blacklistedTag
             #print "\tContained global blacklisted tag: " + globalBlacklistedTag
             #print "\tWidth: " + str(width)
             #print "\tHeight: " + str(height)
@@ -327,6 +368,27 @@ def downloadImage( url, location ):
     call(["wget","-q", "-N", "-P" + location, url ])
     numthreads -= 1
 
+def updateMD5BlackAndWhiteLists():
+    # list of al the blacklist/whitelist files. Each one corrisponds with
+    # it's data structure equivalent
+    files = [ ".md5_nsfw_blacklist", ".md5_global_blacklist", ".md5_nsfw_whitelist",
+        ".md5_global_whitelist" ]
+    structs = [ MD5_NSFW_BLACKLIST, MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST,
+        MD5_GLOBAL_WHITELISTLIST ]
+
+    for i in range( len(files) ):
+
+        # try and load the contents of the file
+        try:
+            f = open( files[i])
+            for line in f:
+                structs[i].append( str(line) )
+            f.close()
+        except Exception, e:
+            print "Error opening " + files[i]
+            print e
+            sys.exit()
+
 def loadBlackAndWhiteLists():
     global arguments
     global NSFW_BLACKLIST
@@ -335,15 +397,18 @@ def loadBlackAndWhiteLists():
     global MD5_GLOBAL_BLACKLIST
     global MD5_NSFW_WHITELISTLIST
     global MD5_GLOBAL_WHITELISTLIST
+    global NSFW_MD5
 
     # list of al the blacklist/whitelist files. Each one corrisponds with
     # it's data structure equivalent
     files = [ ".nsfw_blacklist", ".global_blacklist", ".md5_nsfw_blacklist",
-        ".md5_global_blacklist", ".md5_nsfw_whitelist", ".md5_global_whitelist" ]
+        ".md5_global_blacklist", ".md5_nsfw_whitelist", ".md5_global_whitelist",
+        "._nsfw_md5"]
     structs = [ NSFW_BLACKLIST, GLOBAL_BLACKLIST, MD5_NSFW_BLACKLIST,
-        MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST, MD5_GLOBAL_WHITELISTLIST ]
+        MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST, MD5_GLOBAL_WHITELISTLIST,
+        NSFW_MD5]
 
-    for i in range( len(files) - 1 ):
+    for i in range( len(files) ):
 
         # if the file does not exist, create it
         if not os.path.exists(files[i]):
@@ -355,12 +420,12 @@ def loadBlackAndWhiteLists():
         try:
             f = open( files[i])
             for line in f:
-                structs[i].append( str(line) )
+                structs[i].append( str(line.strip()) )
             f.close()
-            if arguments.verbose:
-                print structs[i]
-        except:
+        except Exception, e:
             print "Error opening " + files[i]
+            print e
+            sys.exit()
 
 def handleArguments():
     global arguments
@@ -380,8 +445,8 @@ def handleArguments():
 
 def main():
     global arguments
-    loadBlackAndWhiteLists()
     handleArguments()
+    loadBlackAndWhiteLists()
     if arguments.verbose:
         print arguments
     search = arguments.search
@@ -395,6 +460,6 @@ def main():
     if not arguments.localonly:
         print "Starting downloads"
         threading.Thread(target=downloadGel, args=[search, width, height, error] ).start()
-        downloadDan( search, width, height, error, username, apikey )
+        threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey]).start()
 
 main()
