@@ -30,28 +30,60 @@ MD5_GLOBAL_WHITELISTLIST = []
 NSFW_MD5 = []
 
 def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
-
+    global arguments
     # create connection
-    connection = httplib2.Http(".cache")
-    header = "posts.json?login=" + login + "&api_key=" + key + "&limit=" + str(numPerPage) + "&"
+    if arguments.verbose:
+        print "Danbooru: Reqesting page"
+    try:
+        connection = httplib2.Http(".cache")
+        header = "posts.json?login=" + login + "&api_key=" + key + "&limit=" + str(numPerPage) + "&"
+        if arguments.verbose:
+            print "Request recieved"
 
-    # make request
-    res, content = connection.request( url + header + "tags=" + tags +\
-    "&page=" + str(pageNum))
-    if len(content) >= 0:
-        return json.loads(content)
-    else:
-        return None
+        # make request
+        res, content = connection.request( url + header + "tags=" + tags +\
+        "&page=" + str(pageNum))
+        if len(content) >= 0:
+            return json.loads(content)
+        else:
+            return None
+    except (httplib2.ServerNotFoundError):
+        print "Could not contact server at danbooru.donmai.us"
+        print "Retrying in 30 seconds"
+        time.sleep(30)
+        getResultsJSON(url, pageNum, numPerPage, tags, login, key )
+    return None
 
 def getResultsXML( url, pageNum, numPerPage, tags ):
-
-    connection = httplib2.Http(".cache")
-    res, content = connection.request( url + "&tags=" + tags
-        + "&pid=" + str(pageNum) + "&limit=" +str( numPerPage))
-    if len( content ) >= 0:
-        return ET.fromstring( content )
-    else:
-        return None
+    global arguments
+    if arguments.verbose:
+        print "Gelbooru: Reqesting page"
+    try:
+        connection = httplib2.Http(".cache")
+        res, content = connection.request( url + "&tags=" + tags
+            + "&pid=" + str(pageNum) + "&limit=" +str( numPerPage))
+        if arguments.verbose:
+            print "\tResults recieved"
+        if not (res.status == 200):
+            if arguments.verbose:
+                print "\tResponse was not 200 (" + res.status + ")"
+            else:
+                print "Error with search, trying again"
+            time.sleep( 5000 )
+            getResultsXML( url, pageNum, numPerPage, tags )
+        if len( content ) >= 0:
+            if arguments.verbose:
+                print "\tResponse was 200"
+                print "Done"
+            return ET.fromstring( content )
+        else:
+            return None
+    except (httplib2.ServerNotFoundError):
+        print "Could not contact server at gelbooru.com"
+        print "Retrying in 30 seconds"
+        time.sleep(30)
+        getResultsXML( url, pageNum, numPerPage, tags)
+    return None
 
 def changewallpaper(tags):
     global arguments
@@ -130,9 +162,8 @@ def downloadGel(searchString, tWidth, tHeight, error ):
     root = getResultsXML(url, 1, numPerPage, searchString)
     numPages = int(math.ceil( int(root.attrib["count"]) / float(len(root) )))
 
+    time.sleep(0.2)
     for i in range(1, numPages + 1):
-        #TODO add try catch around this and other error handling
-        #root = getResultsXML( url, searchString ).getRoot()
         root = getResultsXML(url, i, numPerPage, searchString)
 
         if arguments.verbose:
@@ -151,12 +182,14 @@ def downloadGel(searchString, tWidth, tHeight, error ):
 
                 if filterResult( image, tWidth, tHeight, error ):
                     while numthreads >= 4:
-                        time.sleep(1000)
+                        time.sleep(1)
                     t = threading.Thread(target=downloadImage, args = [child.attrib["file_url"], searchString])
                     numthreads += 1
                     t.start()
+                time.sleep(0.2)
         except(IndexError):
             print "End of results"
+            break
     print "Gelbooru: Finished searching"
 
 
@@ -169,7 +202,8 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
     numPerPage = 100
     numPages = 1000
 
-    for i in range(1,numPages + 1):
+    for i in range(1, numPages + 1):
+        time.sleep(0.2)
         if arguments.verbose:
             print  "Danbooru: current page: " + str(i) + " of ~1000 (" + str(i * numPerPage) + ")"
         result = getResultsJSON(urlbase, i, numPerPage, searchString, login, key)
@@ -179,7 +213,7 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
             try:
                 if filterResult( result[j], tWidth, tHeight, error ):
                     while numthreads >= 4:
-                        time.sleep(1000)
+                        time.sleep(1)
                     md5 = result[j]["md5"]
                     fExtension = result[j]["file_ext"]
                     url = urlbase + "/data/" + md5 + "." + fExtension
@@ -187,10 +221,10 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
                     #threads.append(t)
                     numthreads += 1
                     t.start()
-            except (IndexError, KeyError, TypeError):
+            except (IndexError, TypeError):
                 print "Less than 100 images in this result ("\
                 + str(len(result)) + ")"
-                i = numPages + 1
+                i = numPages + 2
                 j = numPerPage
                 break
 
@@ -243,10 +277,13 @@ def filterResult( result, tWidth, tHeight, error ):
 
     # check if the width and height are acceptable
     #if width <= maxWidth and width >= minWidth and height <= maxHeight and height >= minHeight:
-    if ratio >= minRatio and ratio <= maxRatio:
-        if (width <= minWidth and  height <= minHeight) or arguments.anysize:
+    if (ratio >= minRatio and ratio <= maxRatio) or arguments.anysize:
+        if (width <= minWidth and  height <= minHeight):
             fail = True
             # TODO maybe add verbose message for failed size check
+	# if the anysize argument is used, auto-pass this check
+	if arguments.anysize:
+            fail = False
 
         # if nfsw is not allowed, check the tag blacklist
         for tag in NSFW_BLACKLIST:
@@ -442,8 +479,8 @@ def handleArguments():
     parser.add_argument("-a", "--anysize", help = "Allow any sized image (default is to only allow images equal to or larger than the specified screen size", action="store_true" )
     parser.add_argument("-u", "--username", help = "The username you use to log into danbooru")
     parser.add_argument("-k", "--apikey", help = "Your api key (can be found on your user page")
-    parser.add_argument("-w", "--width", help = "the width of your screen in pixels", type=int)
-    parser.add_argument("-t", "--height", help = "the height of your screen in pixels", type=int)
+    parser.add_argument("-w", "--width", help = "the width of your screen in pixels", default = -1, type=int)
+    parser.add_argument("-t", "--height", help = "the height of your screen in pixels", default = -1, type=int)
     parser.add_argument("-e", "--error", help="the percentage error allowed for the image (default is 5%)", default=0.05, type=float)
     parser.add_argument("-v", "--verbose", help="prints debug output", action="store_true")
     parser.add_argument("--nsfw", help = "Allow nsfw results, default is disallow", action="store_true")
@@ -465,7 +502,10 @@ def main():
     username = arguments.username
     apikey = arguments.apikey
     if not arguments.downloadonly:
-        threading.Thread(target=changewallpaper, args=[search]).start()
+        if platform == 'Windows':
+            print "I'm sorry, the auto-switcher is not supported in windows yet"
+        else:
+            threading.Thread(target=changewallpaper, args=[search]).start()
     if not arguments.localonly:
         print "Starting downloads"
         threading.Thread(target=downloadGel, args=[search, width, height, error] ).start()
