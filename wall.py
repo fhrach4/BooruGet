@@ -37,13 +37,15 @@ def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
     try:
         connection = httplib2.Http(".cache")
         header = "posts.json?login=" + login + "&api_key=" + key + "&limit=" + str(numPerPage) + "&"
-        if arguments.verbose:
-            print "Request recieved"
-
         # make request
+        if arguments.verbose:
+            print "Making request: " + url + header + "tags=" + tags + \
+            "&page=" + str(pageNum)
         res, content = connection.request( url + header + "tags=" + tags +\
         "&page=" + str(pageNum))
-        if len(content) >= 0:
+        if len(content) >= 0 and res.status == 200:
+            if arguments.verbose:
+                print "Response recieved"
             return json.loads(content)
         else:
             return None
@@ -207,7 +209,15 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
         if arguments.verbose:
             print  "Danbooru: current page: " + str(i) + " of ~1000 (" + str(i * numPerPage) + ")"
         result = getResultsJSON(urlbase, i, numPerPage, searchString, login, key)
-        if len(result) == 0:
+        if result is None or len(result) == 0:
+            if arguments.verbose:
+                print "Breaking..."
+                if result is None:
+                    print "\t result was NoneType"
+                elif len(result) == 0:
+                    print "\t length of result was 0"
+                else:
+                    print "\t an unknown error has happened"
             break
         for j in range( numPerPage ):
             try:
