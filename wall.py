@@ -94,7 +94,7 @@ def changewallpaper(tags):
     updateMD5BlackAndWhiteLists()
 
     change = True
-    dirname = "/home/frank4/.test/" + tags
+    dirname = os.getcwd() +"/" + tags
     if arguments.verbose:
         print "Starting wallpaper switch..."
     try:
