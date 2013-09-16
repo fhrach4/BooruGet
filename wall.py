@@ -164,8 +164,6 @@ def changewallpaper(tags):
                     break
                 time.sleep(0.5)
 
-            print "done"
-
 def downloadGel(searchString, tWidth, tHeight, error ):
     global arguments
     global numthreads
