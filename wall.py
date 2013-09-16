@@ -17,6 +17,7 @@ from subprocess import call
 threads= []
 numthreads = 0
 writeLock = False
+exitapp = False
 
 platform = platform.system()
 
@@ -90,6 +91,7 @@ def getResultsXML( url, pageNum, numPerPage, tags ):
 def changewallpaper(tags):
     global arguments
     global platform
+    global exitapp
 
     updateMD5BlackAndWhiteLists()
 
@@ -136,8 +138,9 @@ def changewallpaper(tags):
             # if the file was not removed from the directory change it
             # TODO handle different os and window managers
             if change and platform == "Linux":
-                call(["xfconf-query", "-c","xfce4-desktop", "-p", \
-                "/backdrop/screen0/monitor0/image-path", "-s", fileName])
+                #call(["xfconf-query", "-c","xfce4-desktop", "-p", \
+                #"/backdrop/screen0/monitor0/image-path", "-s", fileName])
+                call(["nitrogen", "--set-auto", fileName])
                 if arguments.verbose:
                     print "\tcommand run"
             if arguments.verbose:
@@ -146,11 +149,22 @@ def changewallpaper(tags):
         # Do nothing, this is not a problem
         pass
 
-    # if the wallpaper was not changed, try again, othwerwise wait 30 seconds
-    if not change:
-        threading.Thread(target=changewallpaper, args=[tags]).start()
-    else:
-        threading.Timer(30, changewallpaper, args=[tags]).start()
+    # if call to exit is found, break out of this loop now
+    if not exitapp:
+        # if the wallpaper was not changed, try again, othwerwise wait 30 seconds
+        if not change:
+            threading.Thread(target=changewallpaper, args=[tags]).start()
+        else:
+            start = time.time()
+            nextt = threading.Timer(30, changewallpaper, args=[tags])
+            nextt.start()
+            while time.time() - start <= 29:
+                if exitapp:
+                    nextt.cancel()
+                    break
+                time.sleep(0.5)
+
+            print "done"
 
 def downloadGel(searchString, tWidth, tHeight, error ):
     global arguments
@@ -166,6 +180,11 @@ def downloadGel(searchString, tWidth, tHeight, error ):
 
     time.sleep(0.2)
     for i in range(1, numPages + 1):
+
+        # if call to exit is found, break out of this loop now
+        if exitapp:
+            break
+
         root = getResultsXML(url, i, numPerPage, searchString)
 
         if arguments.verbose:
@@ -194,7 +213,6 @@ def downloadGel(searchString, tWidth, tHeight, error ):
             break
     print "Gelbooru: Finished searching"
 
-
 def downloadDan(searchString, tWidth, tHeight, error, login, key ):
     global numthreads
     global threads
@@ -205,6 +223,11 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
     numPages = 1000
 
     for i in range(1, numPages + 1):
+
+        # if call to exit is found, break out of this loop now
+        if exitapp:
+            break
+
         time.sleep(0.2)
         if arguments.verbose:
             print  "Danbooru: current page: " + str(i) + " of ~1000 (" + str(i * numPerPage) + ")"
@@ -291,9 +314,9 @@ def filterResult( result, tWidth, tHeight, error ):
         if (width <= minWidth and  height <= minHeight):
             fail = True
             # TODO maybe add verbose message for failed size check
-	# if the anysize argument is used, auto-pass this check
-	if arguments.anysize:
-            fail = False
+    # if the anysize argument is used, auto-pass this check
+    if arguments.anysize:
+        fail = False
 
         # if nfsw is not allowed, check the tag blacklist
         for tag in NSFW_BLACKLIST:
@@ -501,24 +524,39 @@ def handleArguments():
 
 def main():
     global arguments
-    handleArguments()
-    loadBlackAndWhiteLists()
-    if arguments.verbose:
-        print arguments
-    search = arguments.search
-    width = arguments.width
-    height = arguments.height
-    error = arguments.error
-    username = arguments.username
-    apikey = arguments.apikey
-    if not arguments.downloadonly:
-        if platform == 'Windows':
-            print "I'm sorry, the auto-switcher is not supported in windows yet"
-        else:
-            threading.Thread(target=changewallpaper, args=[search]).start()
-    if not arguments.localonly:
-        print "Starting downloads"
-        threading.Thread(target=downloadGel, args=[search, width, height, error] ).start()
-        threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey]).start()
+    global exitapp
+    try:
+        handleArguments()
+        loadBlackAndWhiteLists()
+        if arguments.verbose:
+            print arguments
+        search = arguments.search
+        width = arguments.width
+        height = arguments.height
+        error = arguments.error
+        username = arguments.username
+        apikey = arguments.apikey
+
+        activeThreads = []
+        if not arguments.downloadonly:
+            if platform == 'Windows':
+                print "I'm sorry, the auto-switcher is not supported in windows yet"
+            else:
+                slideshow = threading.Thread(target=changewallpaper, args=[search])
+                slideshow.start()
+                activeThreads.append(slideshow)
+        if not arguments.localonly:
+            print "Starting downloads"
+            gel = threading.Thread(target=downloadGel, args=[search, width, height, error] )
+            dan = threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey])
+            gel.start()
+            dan.start()
+            activeThreads.append(dan)
+            activeThreads.append(gel)
+        sys.stdin.read()
+    except (KeyboardInterrupt, SystemExit):
+        exitapp = True
+        raise
+
 
 main()
