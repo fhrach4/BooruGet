@@ -1,7 +1,7 @@
 """
 Frank Hrach
 wall.py
-Last edit: Mon Sep  2 01:04:44 EDT 2013
+Sun Sep 15 22:35:02 EDT 2013
 """
 
 import argparse
@@ -312,9 +312,9 @@ def filterResult( result, tWidth, tHeight, error ):
         if (width <= minWidth and  height <= minHeight):
             fail = True
             # TODO maybe add verbose message for failed size check
-    # if the anysize argument is used, auto-pass this check
-    if arguments.anysize:
-        fail = False
+        # if the anysize argument is used, auto-pass this check
+        if arguments.anysize:
+            fail = False
 
         # if nfsw is not allowed, check the tag blacklist
         for tag in NSFW_BLACKLIST:
@@ -422,21 +422,23 @@ def filterResult( result, tWidth, tHeight, error ):
                 return False
     else:
         if arguments.verbose:
-            #print "failed size test"
-            #print "Skipped:"
-            #print "\trating: " + rating
-            #print "\tmd5: " + md5
-            #print "\tincluded in md5 blacklist: " + str(md5_Fail)
-            #print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
-            #print "\tincluded in md5 whitelist: " + str(md5_Pass)
-            #print "\tincluded in md5 whitelist: " + str(md5_Pass)
-            #print "\tfile extension: " + fExtension
-            #print "\tContained blacklisted tag: " + blacklistedTag
-            #print "\tContained global blacklisted tag: " + globalBlacklistedTag
-            #print "\tWidth: " + str(width)
-            #print "\tHeight: " + str(height)
-            #print "\tnsfw: " + str(arguments.nsfw)
-            pass
+            print "failed size test"
+            print "Skipped:"
+            print "\trating: " + rating
+            print "\tmd5: " + md5
+            print "\tincluded in md5 blacklist: " + str(md5_Fail)
+            print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
+            print "\tincluded in md5 whitelist: " + str(md5_Pass)
+            print "\tincluded in md5 whitelist: " + str(md5_Pass)
+            print "\tfile extension: " + fExtension
+            print "\tContained blacklisted tag: " + str(blacklistedTag)
+            print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
+            print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
+            print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
+            print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + " minimum: " + str(minRatio)\
+                + " maximum: " + str(maxRatio) + ")"
+            print "\tnsfw allowed: " + str(arguments.nsfw)
+            print "\tTag String: " + str(tString)
 
     return False
 
