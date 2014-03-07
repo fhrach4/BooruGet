@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 """
 Frank Hrach
 wall.py
@@ -112,12 +113,18 @@ def changewallpaper(tags):
         if len(files) > 0:
 
             # get a random index, and create the path and md5
-            randomIndex = random.randint(0, len(files) -1)
-            fileName =  dirname + "/" + files[randomIndex]
-            md5 = files[randomIndex].split(".")[0]
+            randomIndex0 = random.randint(0, len(files) -1)
+            randomIndex1 = random.randint(0, len(files) -1)
+            randomIndex2 = random.randint(0, len(files) -1)
+            fileName0 =  dirname + "/" + files[randomIndex0]
+            fileName1 =  dirname + "/" + files[randomIndex1]
+            fileName2 =  dirname + "/" + files[randomIndex2]
+            md5 = files[randomIndex0].split(".")[0]
+            md51 = files[randomIndex1].split(".")[0]
+            md52 = files[randomIndex2].split(".")[0]
 
             if arguments.verbose:
-                print "\tNext filename: " + fileName
+                print "\tNext filename: " + fileName0
                 print "\tmd5: " + md5
 
             # if in the md5 nsfw blacklist remove the file
@@ -140,7 +147,10 @@ def changewallpaper(tags):
             if change and platform == "Linux":
                 #call(["xfconf-query", "-c","xfce4-desktop", "-p", \
                 #"/backdrop/screen0/monitor0/image-path", "-s", fileName])
-                call(["nitrogen", "--set-auto", fileName])
+                call(["./switch", "0", fileName0])
+                call(["./switch", "1", fileName1])
+                call(["./switch", "2", fileName2])
+                call(["nitrogen", "--restore"])
                 if arguments.verbose:
                     print "\tcommand run"
             if arguments.verbose:
@@ -330,7 +340,7 @@ def filterResult( result, tWidth, tHeight, error ):
             md5_Fail = True
 
         # check if md5 is blacklisted for nsfw
-        if md5 in MD5_GLOBAL_BLACKLIST and arguments.nsfw == True:
+        if md5 in MD5_GLOBAL_BLACKLIST:
             fail = True
             md5_Global_Fail = True
 
@@ -553,7 +563,8 @@ def main():
             dan.start()
             activeThreads.append(dan)
             activeThreads.append(gel)
-        sys.stdin.read()
+        while threading.active_count() > 1:
+            time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         exitapp = True
         raise
