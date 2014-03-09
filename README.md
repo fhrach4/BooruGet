@@ -61,4 +61,4 @@ Currently this program does not have a gui
 * GUI client for Windows and GTK
 * Better organization
 * Better README
-* Switch to
+* Switch to python file download library from wget
