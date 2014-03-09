@@ -2,7 +2,7 @@
 ##About
 This project downlads files from danbooru and gelbooru. It can run on all operating systems, but requires wget to be in your path.
 
-This program is still very much in devlopment and is not very user friendly yet.
+* This program is still very much in devlopment and is not very user friendly yet.
 
 ##Installation
 Run BooruGet which will create all required files/folders.
@@ -18,7 +18,7 @@ username
 apikey 
 ```
 username is your username
-apikey is your apikey for danbooru. Gelbooryu does not require an apikey
+apikey is your apikey for danbooru. Gelbooru does not require an apikey
 
 ###Black and White List Configuration
 All files under this category should have each entry on it's own line
@@ -51,13 +51,14 @@ A program-created list of files that would register as nsfw
 
 ##Running
 Currently this program does not have a gui
-...It can be run from the terminal in OSX and Linux by calling ./BooruGet searchName
-...In windows it can be run from cmd or PowerShell using python BooruGet searchName
+* It can be run from the terminal in OSX and Linux by calling ./BooruGet searchName
+* In windows it can be run from cmd or PowerShell using python BooruGet searchName
 
-'./BooruGet "some search"' to run
-'./BooruGet --help' to get help
+* ```./BooruGet "some search"``` to run
+* ```./BooruGet --help``` to get help
 
 ##Planned Features
-...GUI client for Windows and GTK
-...Better organization
-...Better README
+* GUI client for Windows and GTK
+* Better organization
+* Better README
+* Switch to

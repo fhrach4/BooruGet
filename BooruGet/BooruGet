@@ -98,91 +98,6 @@ def getResultsXML( url, pageNum, numPerPage, tags ):
         getResultsXML( url, pageNum, numPerPage, tags)
     return None
 
-def changewallpaper(tags):
-    global arguments
-    global platform
-    global exitapp
-
-    updateMD5BlackAndWhiteLists()
-
-    change = True
-    dirname = os.getcwd() +"/" + tags
-    if arguments.verbose:
-        print "Starting wallpaper switch..."
-    try:
-        if arguments.verbose:
-            print "\tGetting directory listng at: " + dirname
-
-        files = os.listdir( dirname )
-
-        if arguments.verbose:
-            print "\t" + str(len(files)) + " in directory"
-
-        # as long as there is at least one file in the directory
-        if len(files) > 0:
-
-            # get a random index, and create the path and md5
-            randomIndex0 = random.randint(0, len(files) -1)
-            randomIndex1 = random.randint(0, len(files) -1)
-            randomIndex2 = random.randint(0, len(files) -1)
-            fileName0 =  dirname + "/" + files[randomIndex0]
-            fileName1 =  dirname + "/" + files[randomIndex1]
-            fileName2 =  dirname + "/" + files[randomIndex2]
-            md5 = files[randomIndex0].split(".")[0]
-            md51 = files[randomIndex1].split(".")[0]
-            md52 = files[randomIndex2].split(".")[0]
-
-            if arguments.verbose:
-                print "\tNext filename: " + fileName0
-                print "\tmd5: " + md5
-
-            # if in the md5 nsfw blacklist remove the file
-            if md5 in MD5_GLOBAL_BLACKLIST or ( md5 in MD5_NSFW_WHITELISTLIST and arguments.nsfw ):
-                if arguments.verbose:
-                    print "\tAttempting to remove file..."
-                os.remove(fileName)
-                change = False
-                if arguments.verbose:
-                    print "\tRemoved file because it was blacklisted"
-
-            # if nsfw is off and image is marked as nsfw, try again
-            if (not arguments.nsfw) and md5 in NSFW_MD5:
-                if arguments.verbose:
-                    print "\tNSFW is on, trying again"
-                change = False
-
-            # if the file was not removed from the directory change it
-            # TODO handle different os and window managers
-            if change and platform == "Linux":
-                #call(["xfconf-query", "-c","xfce4-desktop", "-p", \
-                #"/backdrop/screen0/monitor0/image-path", "-s", fileName])
-                call(["./switch", "0", fileName0])
-                call(["./switch", "1", fileName1])
-                call(["./switch", "2", fileName2])
-                call(["nitrogen", "--restore"])
-                if arguments.verbose:
-                    print "\tcommand run"
-            if arguments.verbose:
-                print "Wallpaper switch ... Done"
-    except:
-        # Do nothing, this is not a problem
-        pass
-
-    # if call to exit is found, break out of this loop now
-    if not exitapp:
-        # if the wallpaper was not changed, try again, othwerwise wait 30 seconds
-        if not change:
-            threading.Thread(target=changewallpaper, args=[tags]).start()
-        else:
-            start = time.time()
-            nextt = threading.Timer(30, changewallpaper, args=[tags])
-            nextt.start()
-            while time.time() - start <= 29:
-                if exitapp:
-                    nextt.cancel()
-                    break
-                time.sleep(0.5)
-
 def downloadGel(searchString, tWidth, tHeight, error ):
     global arguments
     global numthreads
@@ -557,19 +472,18 @@ def loadConfigfile():
 def handleArguments():
     global arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a"    , "--anysize", help = "Allow any sized image (default is to only allow images equal to or larger than the specified screen size", action="store_true" )
-    parser.add_argument("-u"    , "--username", default = arguments["username"], help = "The username you use to log into danbooru this overrides what is found in the config file if specified")
-    parser.add_argument("-k"    , "--apikey", default = arguments["apikey"], help = "Your api key (can be found on your user page. This overrides what is found in the config file if specified")
-    parser.add_argument("-w"    , "--width", help = "the width of your screen in pixels", default = -1, type=int)
-    parser.add_argument("-t"    , "--height", help = "the height of your screen in pixels", default = -1, type=int)
-    parser.add_argument("-e"    , "--error", help="the percentage error allowed for the image (default is 5%)", default=0.05, type=float)
-    parser.add_argument("-v"    , "--verbose", help="prints debug output", action="store_true")
-    parser.add_argument("--nsfw", help = "Allow nsfw results, default is disallow", action="store_true")
-    parser.add_argument("-d"    , "--downloadonly", help = "Download only, do not start changing wallpaper", action="store_true")
-    parser.add_argument("-l"    , "--localonly", help="Do not download, use local files only", action="store_true")
-    parser.add_argument("--no-dan", help="Do not download from danbooru", action="store_true")
-    parser.add_argument("--no-gel", help="Do not download from e local files onlyanbooru", action="store_true")
-    parser.add_argument("search", help = "the string to search for formatted correctly")
+    parser.add_argument("-a"        , "--anysize", help = "Allow any sized image. Default is to only allow images equal to or larger than the specified screen size", action="store_true" )
+    parser.add_argument("-u"        , "--username", default = arguments["username"], help = "The username you use to log into danbooru this overrides what is found in the config file if specified")
+    parser.add_argument("-k"        , "--apikey", default = arguments["apikey"], help = "Your api key can be found on your user page. This overrides what is found in the config file if specified")
+    parser.add_argument("-w"        , "--width", help = "the width of your screen in pixels", default = -1, type=int)
+    parser.add_argument("-t"        , "--height", help = "the height of your screen in pixels", default = -1, type=int)
+    parser.add_argument("-e"        , "--error", help ="the percentage error allowed for the image. Default is 5 percent", default=0.05, type=float)
+    parser.add_argument("-v"        , "--verbose", help ="prints debug output", action="store_true")
+    parser.add_argument("--nsfw"    , help = "Allow nsfw results, default is disallow", action="store_true")
+    parser.add_argument("-l"        , "--localonly", help ="Do not download, use local files only", action="store_true")
+    parser.add_argument("--nodan"  , help ="Do not download from danbooru", action="store_true")
+    parser.add_argument("--nogel"  , help ="Do not download from e local files onlyanbooru", action="store_true")
+    parser.add_argument("search"    , help = "the string to search for. It is the exact same string that would be entered into the site")
 
     arguments = parser.parse_args()
 
@@ -589,21 +503,16 @@ def main():
         username = arguments.username
         apikey = arguments.apikey
         activeThreads = []
-        if not arguments.downloadonly:
-            if platform == 'Windows':
-                print "I'm sorry, the auto-switcher is not supported in windows yet"
-            else:
-                slideshow = threading.Thread(target=changewallpaper, args=[search])
-                slideshow.start()
-                activeThreads.append(slideshow)
         if not arguments.localonly:
             print "Starting downloads"
-            gel = threading.Thread(target=downloadGel, args=[search, width, height, error] )
-            dan = threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey])
-            gel.start()
-            dan.start()
-            activeThreads.append(dan)
-            activeThreads.append(gel)
+            if not arguments.nogel:
+                gel = threading.Thread(target=downloadGel, args=[search, width, height, error] )
+                gel.start()
+                activeThreads.append(gel)
+            if not arguments.nodan:
+                dan = threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey])
+                dan.start()
+                activeThreads.append(dan)
         while threading.active_count() > 1:
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
