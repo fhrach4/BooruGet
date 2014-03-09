@@ -533,6 +533,9 @@ def loadConfigfile():
     global arguments
     global CONFIG
 
+    if not os.path.exists(".config"):
+        os.mkdir(".config")
+
     validSettings = {"username": None, "apikey": None}
 
     if not os.path.exists(CONFIG):
@@ -553,8 +556,6 @@ def loadConfigfile():
 
 def handleArguments():
     global arguments
-    print arguments["username"]
-    print arguments["apikey"]
     parser = argparse.ArgumentParser()
     parser.add_argument("-a"    , "--anysize", help = "Allow any sized image (default is to only allow images equal to or larger than the specified screen size", action="store_true" )
     parser.add_argument("-u"    , "--username", default = arguments["username"], help = "The username you use to log into danbooru this overrides what is found in the config file if specified")
