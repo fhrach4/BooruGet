@@ -2,7 +2,7 @@
 """
 Frank Hrach
 BooruGet
-Sun Sep 15 22:35:02 EDT 2013
+Sun Mar  9 22:20:07 EDT 2014
 """
 
 
@@ -291,7 +291,7 @@ def filterResult(result, tWidth, tHeight, error):
                 blacklistedTag.append(tag)
 
         # check if md5 is blacklisted
-        if md5 in MD5_NSFW_BLACKLIST and arguments.nsfw == False:
+        if md5 in MD5_NSFW_BLACKLIST and not arguments.nsfw:
             fail = True
             md5_Fail = True
 
@@ -311,7 +311,7 @@ def filterResult(result, tWidth, tHeight, error):
             md5_Pass = True
 
         # if nsfw and rating is safe or if md5 was in the whitelist return true
-        if (not(rating != "s" and arguments.nsfw == False) and not fail) or md5_Pass:
+        if(not(rating != "s" and not arguments.nsfw) and not fail) or md5_Pass:
             if arguments.verbose:
                 print "Accepted:"
                 print "\trating: " + rating
