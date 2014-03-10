@@ -5,17 +5,21 @@ BooruGet
 Sun Sep 15 22:35:02 EDT 2013
 """
 
+
 import argparse
-import httplib2, urllib, hashlib
+import httplib2
 import json
 import xml.etree.ElementTree as ET
-import threading, os, random, platform, sys
+import threading
+import os
+import platform
+import sys
 import time
 import math
 
 from subprocess import call
 
-threads= []
+threads = []
 numthreads = 0
 writeLock = False
 exitapp = False
@@ -26,9 +30,13 @@ arguments = {}
 
 # file names
 CONFIG = os.path.join(".config", "BooruGet.config")
-FILES = [os.path.join(".config", "nsfw_blacklist"), os.path.join(".config", "global_blacklist"),
-    os.path.join(".config", "md5_nsfw_blacklist"), os.path.join(".config", "md5_global_blacklist"),
-    os.path.join(".config", "md5_nsfw_whitelist"), os.path.join(".config", "md5_global_whitelist"),
+FILES = [
+    os.path.join(".config", "nsfw_blacklist"), os.path.join(
+        ".config", "global_blacklist"),
+    os.path.join(".config", "md5_nsfw_blacklist"), os.path.join(
+        ".config", "md5_global_blacklist"),
+    os.path.join(".config", "md5_nsfw_whitelist"), os.path.join(
+        ".config", "md5_global_whitelist"),
     os.path.join(".config", "_nsfw_md5")]
 
 # file content arrays
@@ -40,20 +48,22 @@ MD5_NSFW_WHITELISTLIST = []
 MD5_GLOBAL_WHITELISTLIST = []
 NSFW_MD5 = []
 
-def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
+
+def getResultsJSON(url, pageNum, numPerPage, tags, login, key):
     global arguments
     # create connection
     if arguments.verbose:
         print "Danbooru: Reqesting page"
     try:
         connection = httplib2.Http(".cache")
-        header = "posts.json?login=" + login + "&api_key=" + key + "&limit=" + str(numPerPage) + "&"
+        header = "posts.json?login=" + login + "&api_key=" + key + \
+            "&limit=" + str(numPerPage) + "&"
         # make request
         if arguments.verbose:
             print "Making request: " + url + header + "tags=" + tags + \
-            "&page=" + str(pageNum)
-        res, content = connection.request( url + header + "tags=" + tags +\
-        "&page=" + str(pageNum))
+                "&page=" + str(pageNum)
+        res, content = connection.request(
+            url + header + "tags=" + tags + "&page=" + str(pageNum))
         if len(content) >= 0 and res.status == 200:
             if arguments.verbose:
                 print "Response recieved"
@@ -64,17 +74,19 @@ def getResultsJSON(url, pageNum, numPerPage, tags, login, key ):
         print "Could not contact server at danbooru.donmai.us"
         print "Retrying in 30 seconds"
         time.sleep(30)
-        getResultsJSON(url, pageNum, numPerPage, tags, login, key )
+        getResultsJSON(url, pageNum, numPerPage, tags, login, key)
     return None
 
-def getResultsXML( url, pageNum, numPerPage, tags ):
+
+def getResultsXML(url, pageNum, numPerPage, tags):
     global arguments
     if arguments.verbose:
         print "Gelbooru: Reqesting page"
     try:
         connection = httplib2.Http(".cache")
-        res, content = connection.request( url + "&tags=" + tags
-            + "&pid=" + str(pageNum) + "&limit=" +str( numPerPage))
+        res, content = connection.request(
+            url + "&tags=" + tags + "&pid=" + str(pageNum) + "&limit="
+            + str(numPerPage))
         if arguments.verbose:
             print "\tResults recieved"
         if not (res.status == 200):
@@ -82,33 +94,34 @@ def getResultsXML( url, pageNum, numPerPage, tags ):
                 print "\tResponse was not 200 (" + res.status + ")"
             else:
                 print "Error with search, trying again"
-            time.sleep( 5000 )
-            getResultsXML( url, pageNum, numPerPage, tags )
-        if len( content ) >= 0:
+            time.sleep(5000)
+            getResultsXML(url, pageNum, numPerPage, tags)
+        if len(content) >= 0:
             if arguments.verbose:
                 print "\tResponse was 200"
                 print "Done"
-            return ET.fromstring( content )
+            return ET.fromstring(content)
         else:
             return None
     except (httplib2.ServerNotFoundError):
         print "Could not contact server at gelbooru.com"
         print "Retrying in 30 seconds"
         time.sleep(30)
-        getResultsXML( url, pageNum, numPerPage, tags)
+        getResultsXML(url, pageNum, numPerPage, tags)
     return None
 
-def downloadGel(searchString, tWidth, tHeight, error ):
+
+def downloadGel(searchString, tWidth, tHeight, error):
     global arguments
     global numthreads
 
-    url  = "http://gelbooru.com/index.php?page=dapi&s=post&q=index"
+    url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index"
 
     numPerPage = 100
     numPages = 1000
 
     root = getResultsXML(url, 1, numPerPage, searchString)
-    numPages = int(math.ceil( int(root.attrib["count"]) / float(len(root) )))
+    numPages = int(math.ceil(int(root.attrib["count"]) / float(len(root))))
 
     time.sleep(0.2)
     for i in range(1, numPages + 1):
@@ -120,7 +133,9 @@ def downloadGel(searchString, tWidth, tHeight, error ):
         root = getResultsXML(url, i, numPerPage, searchString)
 
         if arguments.verbose:
-            print  "Gelbooru: current page: " + str(i) + " (" + str(i * numPerPage) + ") out of " + str(numPages) + " pages("+ root.attrib["count"] + ")"
+            print "Gelbooru: current page: " + str(i) + " (" + \
+                str(i * numPerPage) + ") out of " + str(numPages) + \
+                " pages(" + root.attrib["count"] + ")"
 
         try:
             for child in root:
@@ -133,10 +148,11 @@ def downloadGel(searchString, tWidth, tHeight, error ):
                 image["tag_string"] = child.attrib["tags"]
                 image["file_ext"] = child.attrib["file_url"].split(".")[3]
 
-                if filterResult( image, tWidth, tHeight, error ):
+                if filterResult(image, tWidth, tHeight, error):
                     while numthreads >= 4:
                         time.sleep(1)
-                    t = threading.Thread(target=downloadImage, args = [child.attrib["file_url"], searchString])
+                    t = threading.Thread(target=downloadImage, args=[
+                        child.attrib["file_url"], searchString])
                     numthreads += 1
                     t.start()
                 time.sleep(0.2)
@@ -145,7 +161,8 @@ def downloadGel(searchString, tWidth, tHeight, error ):
             break
     print "Gelbooru: Finished searching"
 
-def downloadDan(searchString, tWidth, tHeight, error, login, key ):
+
+def downloadDan(searchString, tWidth, tHeight, error, login, key):
     global numthreads
     global threads
     global arguments
@@ -162,8 +179,11 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
 
         time.sleep(0.2)
         if arguments.verbose:
-            print  "Danbooru: current page: " + str(i) + " of ~1000 (" + str(i * numPerPage) + ")"
-        result = getResultsJSON(urlbase, i, numPerPage, searchString, login, key)
+            print "Danbooru: current page: " + str(i) + " of ~1000 (" + \
+                str(i * numPerPage) + ")"
+        result = getResultsJSON(
+            urlbase, i, numPerPage, searchString, login, key)
+
         if result is None or len(result) == 0:
             if arguments.verbose:
                 print "Breaking..."
@@ -174,28 +194,28 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
                 else:
                     print "\t an unknown error has happened"
             break
-        for j in range( numPerPage ):
+        for j in range(numPerPage):
             try:
                 result[j]["md5"]
-                if filterResult( result[j], tWidth, tHeight, error ):
+                if filterResult(result[j], tWidth, tHeight, error):
                     while numthreads >= 4:
                         time.sleep(1)
                     md5 = result[j]["md5"]
                     fExtension = result[j]["file_ext"]
                     url = urlbase + "/data/" + md5 + "." + fExtension
-                    t = threading.Thread(target=downloadImage, args = [url, searchString])
-                    #threads.append(t)
+                    t = threading.Thread(
+                        target=downloadImage, args=[url, searchString])
                     numthreads += 1
                     t.start()
             except (IndexError, TypeError):
                 print "Less than 100 images in this result ("\
-                + str(len(result)) + ")"
+                    + str(len(result)) + ")"
                 i = numPages + 2
                 j = numPerPage
                 break
             except (KeyError):
                 if not os.path.exists("error.log"):
-                    f = open("error.log", "w" )
+                    f = open("error.log", "w")
                     f.write('')
                     f.close()
                 f = file("error.log", 'w')
@@ -204,7 +224,8 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key ):
 
     print "Danbooru: Finished searching"
 
-def filterResult( result, tWidth, tHeight, error ):
+
+def filterResult(result, tWidth, tHeight, error):
     """
     result  ->  A dictionary containing the following keys: md5, file_ext,
                 image_height, image_width, rating, tag_string
@@ -230,8 +251,9 @@ def filterResult( result, tWidth, tHeight, error ):
     tagString = tString.split(" ")
 
     minWidth = tWidth - tWidth * error
-    maxWidth = tWidth + tWidth * error
     minHeight = tHeight - tHeight * error
+
+    # maxHeight may not be used...
     maxHeight = tHeight + tHeight * error
 
     fail = False
@@ -244,15 +266,16 @@ def filterResult( result, tWidth, tHeight, error ):
 
     # calculate the ratio
     ratio = width / float(height)
-    tratio = tWidth/ float(tHeight)
+    tratio = tWidth / float(tHeight)
 
     maxRatio = tratio + tratio * error
     minRatio = tratio - tratio * error
 
     # check if the width and height are acceptable
-    #if width <= maxWidth and width >= minWidth and height <= maxHeight and height >= minHeight:
+    # if width <= maxWidth and width >= minWidth and height <= maxHeight and
+    # height >= minHeight:
     if (ratio >= minRatio and ratio <= maxRatio) or arguments.anysize:
-        if (width <= minWidth and  height <= minHeight):
+        if (width <= minWidth and height <= minHeight):
             fail = True
             # TODO maybe add verbose message for failed size check
         # if the anysize argument is used, auto-pass this check
@@ -265,7 +288,7 @@ def filterResult( result, tWidth, tHeight, error ):
                 if not arguments.nsfw:
                     fail = True
                 mark_nsfw = True
-                blacklistedTag.append( tag )
+                blacklistedTag.append(tag)
 
         # check if md5 is blacklisted
         if md5 in MD5_NSFW_BLACKLIST and arguments.nsfw == False:
@@ -281,7 +304,7 @@ def filterResult( result, tWidth, tHeight, error ):
         for tag in GLOBAL_BLACKLIST:
             if tag in tagString:
                 fail = True
-                globalBlacklistedTag.append( tag )
+                globalBlacklistedTag.append(tag)
 
         # check if md5 is in the md5 whitelist
         if md5 in MD5_NSFW_WHITELISTLIST:
@@ -294,25 +317,28 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\trating: " + rating
                 print "\tmd5: " + md5
                 print "\tincluded in md5 nsfw blacklist: " + str(md5_Fail)
-                print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
+                print "\tincluded in md5 global blacklist: " + \
+                    str(md5_Global_Fail)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
                 print "\tContained blacklisted tag: " + str(blacklistedTag)
-                print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
-                print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
-                print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
+                print "\tContained global blacklisted tag: " + \
+                    str(globalBlacklistedTag)
+                print "\tWidth: " + str(width) + " (minimim: " + \
+                    str(minWidth) + ")"
+                print "\tHeight: " + str(height) + " (minumum: " + \
+                    str(maxHeight) + ")"
                 print "\tRatio: " + str(ratio) + "(minimum: " + str(minRatio)\
                     + " maximum: " + str(maxRatio) + ")"
                 print "\tnsfw allowed: " + str(arguments.nsfw)
                 try:
                     print "\tTag String: " + str(tString)
-                except( UnicodeEncodeError):
+                except(UnicodeEncodeError):
                     pass
-
 
             # if the rating is not s and it is not already marked as nsfw,
             # mark as nsfw
-            if ( not rating == "s") and (not str(md5) in NSFW_MD5):
+            if (not rating == "s") and (not str(md5) in NSFW_MD5):
                 if arguments.verbose:
                     print "\t\tmarking as nsfw"
                 NSFW_MD5.append(str(md5))
@@ -320,7 +346,7 @@ def filterResult( result, tWidth, tHeight, error ):
                     time.sleep(500)
                 writeLock = True
                 f = open("._nsfw_md5", "a+")
-                f.write( md5 + '\n' )
+                f.write(md5 + '\n')
                 f.close()
                 writeLock = False
                 if arguments.verbose:
@@ -335,7 +361,7 @@ def filterResult( result, tWidth, tHeight, error ):
                     time.sleep(500)
                 writeLock = True
                 f = open("._nsfw_md5", "a+")
-                f.write( md5 + '\n' )
+                f.write(md5 + '\n')
                 f.close()
                 writeLock = False
                 if arguments.verbose:
@@ -347,20 +373,25 @@ def filterResult( result, tWidth, tHeight, error ):
                 print "\trating: " + rating
                 print "\tmd5: " + md5
                 print "\tincluded in md5 blacklist: " + str(md5_Fail)
-                print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
+                print "\tincluded in md5 global blacklist: " + \
+                    str(md5_Global_Fail)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tincluded in md5 whitelist: " + str(md5_Pass)
                 print "\tfile extension: " + fExtension
                 print "\tContained blacklisted tag: " + str(blacklistedTag)
-                print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
-                print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
-                print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
-                print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + " minimum: " + str(minRatio)\
-                    + " maximum: " + str(maxRatio) + ")"
+                print "\tContained global blacklisted tag: " + \
+                    str(globalBlacklistedTag)
+                print "\tWidth: " + str(width) + " (minimim: " + \
+                    str(minWidth) + ")"
+                print "\tHeight: " + str(height) + " (minumum: " + \
+                    str(maxHeight) + ")"
+                print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + \
+                    " minimum: " + str(minRatio) + " maximum: " + \
+                    str(maxRatio) + ")"
                 print "\tnsfw allowed: " + str(arguments.nsfw)
                 try:
                     print "\tTag String: " + str(tString)
-                except( UnicodeEncodeError):
+                except(UnicodeEncodeError):
                     pass
                 return False
     else:
@@ -375,39 +406,47 @@ def filterResult( result, tWidth, tHeight, error ):
             print "\tincluded in md5 whitelist: " + str(md5_Pass)
             print "\tfile extension: " + fExtension
             print "\tContained blacklisted tag: " + str(blacklistedTag)
-            print "\tContained global blacklisted tag: " + str(globalBlacklistedTag)
-            print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + ")"
-            print "\tHeight: " + str(height) +  " (minumum: " + str(maxHeight)  + ")"
-            print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + " minimum: " + str(minRatio)\
-                + " maximum: " + str(maxRatio) + ")"
+            print "\tContained global blacklisted tag: " + \
+                str(globalBlacklistedTag)
+            print "\tWidth: " + str(width) + " (minimim: " + str(minWidth) + \
+                ")"
+            print "\tHeight: " + str(height) + " (minumum: " + \
+                str(maxHeight) + ")"
+            print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + \
+                " minimum: " + str(minRatio) + \
+                " maximum: " + str(maxRatio) + ")"
             print "\tnsfw allowed: " + str(arguments.nsfw)
             print "\tTag String: " + str(tString)
 
     return False
 
-def downloadImage( url, location ):
+
+def downloadImage(url, location):
     global numthreads
-    call(["wget","-q", "-N", "-P" + location, url ])
+    call(["wget", "-q", "-N", "-P" + location, url])
     numthreads -= 1
+
 
 def updateMD5BlackAndWhiteLists():
     # list of al the blacklist/whitelist files. Each one corrisponds with
     # it's data structure equivalent
-    structs = [ MD5_NSFW_BLACKLIST, MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST,
-        MD5_GLOBAL_WHITELISTLIST ]
+    structs = [
+        MD5_NSFW_BLACKLIST, MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST,
+        MD5_GLOBAL_WHITELISTLIST]
 
-    for i in range( len(FILES) ):
+    for i in range(len(FILES)):
 
         # try and load the contents of the file
         try:
-            f = open( FILES[i])
+            f = open(FILES[i])
             for line in f:
-                structs[i].append( str(line) )
+                structs[i].append(str(line))
             f.close()
         except Exception, e:
             print "Error opening " + FILES[i]
             print e
             sys.exit()
+
 
 def loadBlackAndWhiteLists():
     global arguments
@@ -421,28 +460,30 @@ def loadBlackAndWhiteLists():
 
     # list of al the blacklist/whitelist files. Each one corrisponds with
     # it's data structure equivalent
-    structs = [ NSFW_BLACKLIST, GLOBAL_BLACKLIST, MD5_NSFW_BLACKLIST,
+    structs = [
+        NSFW_BLACKLIST, GLOBAL_BLACKLIST, MD5_NSFW_BLACKLIST,
         MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST, MD5_GLOBAL_WHITELISTLIST,
         NSFW_MD5]
 
-    for i in range( len(FILES) ):
+    for i in range(len(FILES)):
 
         # if the file does not exist, create it
         if not os.path.exists(FILES[i]):
-            f = open(FILES[i], "w" )
+            f = open(FILES[i], "w")
             f.write('')
             f.close()
 
         # then try and load the contents of the file
         try:
-            f = open( FILES[i])
+            f = open(FILES[i])
             for line in f:
-                structs[i].append( str(line.strip()) )
+                structs[i].append(str(line.strip()))
             f.close()
         except Exception, e:
             print "Error opening " + FILES[i]
             print e
             sys.exit()
+
 
 def loadConfigfile():
     global arguments
@@ -454,7 +495,7 @@ def loadConfigfile():
     validSettings = {"username": None, "apikey": None}
 
     if not os.path.exists(CONFIG):
-        f = open(CONFIG, "w" )
+        f = open(CONFIG, "w")
         f.write('username \n')
         f.write('apikey ')
         f.close()
@@ -469,23 +510,50 @@ def loadConfigfile():
         pass
     arguments = validSettings
 
+
 def handleArguments():
     global arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a"        , "--anysize", help = "Allow any sized image. Default is to only allow images equal to or larger than the specified screen size", action="store_true" )
-    parser.add_argument("-u"        , "--username", default = arguments["username"], help = "The username you use to log into danbooru this overrides what is found in the config file if specified")
-    parser.add_argument("-k"        , "--apikey", default = arguments["apikey"], help = "Your api key can be found on your user page. This overrides what is found in the config file if specified")
-    parser.add_argument("-w"        , "--width", help = "the width of your screen in pixels", default = -1, type=int)
-    parser.add_argument("-t"        , "--height", help = "the height of your screen in pixels", default = -1, type=int)
-    parser.add_argument("-e"        , "--error", help ="the percentage error allowed for the image. Default is 5 percent", default=0.05, type=float)
-    parser.add_argument("-v"        , "--verbose", help ="prints debug output", action="store_true")
-    parser.add_argument("--nsfw"    , help = "Allow nsfw results, default is disallow", action="store_true")
-    parser.add_argument("-l"        , "--localonly", help ="Do not download, use local files only", action="store_true")
-    parser.add_argument("--nodan"  , help ="Do not download from danbooru", action="store_true")
-    parser.add_argument("--nogel"  , help ="Do not download from e local files onlyanbooru", action="store_true")
-    parser.add_argument("search"    , help = "the string to search for. It is the exact same string that would be entered into the site")
+    parser.add_argument(
+        "-a", "--anysize", help="Allow any sized image. " +
+        "Default is to only allow images equal to or larger than the " +
+        "specified screen size", action="store_true")
+    parser.add_argument(
+        "-u", "--username", default=arguments["username"],
+        help="The username you use to log into danbooru this overrides what " +
+        "is found in the config file if specified")
+    parser.add_argument(
+        "-k", "--apikey", default=arguments["apikey"],
+        help="Your api key can be found on your user page. This overrides " +
+        "what is found in the config file if specified")
+    parser.add_argument(
+        "-w", "--width", help="the width of your screen in pixels", default=-1,
+        type=int)
+    parser.add_argument(
+        "-t", "--height", help="the height of your screen in pixels",
+        default=-1, type=int)
+    parser.add_argument(
+        "-e", "--error", help="the percentage error allowed for the image." +
+        "Default is 5 percent", default=0.05, type=float)
+    parser.add_argument(
+        "-v", "--verbose", help="prints debug output", action="store_true")
+    parser.add_argument(
+        "--nsfw", help="Allow nsfw results, default is disallow",
+        action="store_true")
+    parser.add_argument(
+        "-l", "--localonly", help="Do not download, use local files only",
+        action="store_true")
+    parser.add_argument(
+        "--nodan", help="Do not download from danbooru", action="store_true")
+    parser.add_argument(
+        "--nogel", help="Do not download from e local files onlyanbooru",
+        action="store_true")
+    parser.add_argument(
+        "search", help="the string to search for. It is the exact same " +
+        "string that would be entered into the site")
 
     arguments = parser.parse_args()
+
 
 def main():
     global arguments
@@ -506,11 +574,14 @@ def main():
         if not arguments.localonly:
             print "Starting downloads"
             if not arguments.nogel:
-                gel = threading.Thread(target=downloadGel, args=[search, width, height, error] )
+                gel = threading.Thread(
+                    target=downloadGel, args=[search, width, height, error])
                 gel.start()
                 activeThreads.append(gel)
             if not arguments.nodan:
-                dan = threading.Thread(target=downloadDan, args = [search, width, height, error, username, apikey])
+                dan = threading.Thread(
+                    target=downloadDan, args=[
+                        search, width, height, error, username, apikey])
                 dan.start()
                 activeThreads.append(dan)
         while threading.active_count() > 1:
