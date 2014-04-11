@@ -1,11 +1,11 @@
 """
 Frank Hrach
 Booru.py
-Sun Mar  9 22:29:53 EDT 2014
 """
 
 from abc import ABCMeta, abstractmethod
-
+import urllib
+import os
 
 class Booru:
     __metaclass = ABCMeta
@@ -13,7 +13,7 @@ class Booru:
     URL = None
 
     #argument variables
-    anySize = false;
+    anySize = False;
 
     targetWidth = -1
     targetHeight = -1
@@ -27,9 +27,7 @@ class Booru:
 
         self.anySize = arguments.anysize
 
-    @abstractmethod
-    def Download(self):
-        pass
+
 
     @abstractmethod
     def getResults(self):

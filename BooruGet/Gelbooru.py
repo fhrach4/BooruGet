@@ -5,11 +5,11 @@ Sun Mar  9 22:29:53 EDT 2014
 """
 
 import Booru
-
+import Filter
 import httplib2
-import xml.etree.ElementTree as ET
-
+import math
 import time
+import xml.etree.ElementTree as ET
 
 
 class GelbooruDownloader(Booru):
@@ -23,6 +23,7 @@ class GelbooruDownloader(Booru):
 
     pageNum = 0
     numberOfPages = 1000
+    numberPerPage = 100
 
     verbose = False
 
@@ -31,10 +32,7 @@ class GelbooruDownloader(Booru):
         self.targetWidth = targetWidth
         self.error = error
 
-    def getResults(self):
-        pass
-
-    def connect(self):
+    def getResults(self, url, pageNum, numberPerPage, tags):
         if self.verbose:
             print "Gelbooru: Reqesting page"
         try:
@@ -50,7 +48,7 @@ class GelbooruDownloader(Booru):
                 else:
                     print "Error with search, trying again"
                 time.sleep(5000)
-                self.connect()
+                self.getResults( url, pageNum, numberPerPage, tags)
             if len(content) >= 0:
                 if self.verbose:
                     print "\tResponse was 200"
@@ -65,23 +63,27 @@ class GelbooruDownloader(Booru):
             self.connect()
         return None
 
-        def download():
-            root = connect(url, 1, numPerPage, searchString)
+        def download(self):
+            # connect once to get the number of pages for the search
+            root = self.getResults(self.URL, 1, self.numberPerPage, self.searchString)
             numberOfPages = int(
                 math.ceil(int(root.attrib["count"]) / float(len(root))))
 
+            # sleep to ensure we are not spamming the server
             time.sleep(0.2)
-            for i in range(1, numPages + 1):
+
+            for i in range(1, numberOfPages + 1):
 
                 # if call to exit is found, break out of this loop now
-                if exitapp:
-                    break
+                #if exitapp:
+                    #break
 
-                root = getResultsXML(url, i, numPerPage, searchString)
+                # Get page from the server
+                root = self.getResults(self.URL, i, self.numberPerPage, self.searchString)
 
-                if arguments.verbose:
+                if self.verbose:
                     print "Gelbooru: current page: " + str(i) + " (" + \
-                        str(i * numPerPage) + ") out of " + str(numPages) + \
+                        str(i * self.numberPerPage) + ") out of " + str(self.numberOfPages) + \
                         " pages(" + root.attrib["count"] + ")"
 
                 try:
@@ -96,7 +98,7 @@ class GelbooruDownloader(Booru):
                         image["file_ext"] = \
                             child.attrib["file_url"].split(".")[3]
 
-                        if filterResult(image, tWidth, tHeight, error):
+                        if Filter.filterResult(image, tWidth, tHeight, error):
                             while numthreads >= 4:
                                 time.sleep(1)
                             t = threading.Thread(target=downloadImage, args=[

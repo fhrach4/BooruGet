@@ -39,6 +39,9 @@ FILES = [
         ".config", "md5_global_whitelist"),
     os.path.join(".config", "_nsfw_md5")]
 
+# TODO switch this to load from the config file
+OUT_DIR = src;
+
 # file content arrays
 NSFW_BLACKLIST = []
 GLOBAL_BLACKLIST = []
@@ -221,8 +224,11 @@ def updateMD5BlackAndWhiteLists():
             print e
             sys.exit()
 
-
-
+def initDirectories():
+    global OUT_DIR
+    if not os.path.exists(OUT_DIR):
+ S
+ os.mkdir(OUT_DIR)
 
 def loadConfigfile():
     global arguments
