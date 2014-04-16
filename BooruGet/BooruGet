@@ -250,11 +250,12 @@ def filterResult(result, tWidth, tHeight, error):
     tString = result['tag_string']
     tagString = tString.split(" ")
 
-    minWidth = tWidth - tWidth * error
-    minHeight = tHeight - tHeight * error
+    minWidth = width - width * error
+    minHeight = height - height * error
 
     # maxHeight may not be used...
     maxHeight = tHeight + tHeight * error
+    maxHeight = height + height * error
 
     fail = False
     mark_nsfw = False
@@ -276,6 +277,7 @@ def filterResult(result, tWidth, tHeight, error):
     # height >= minHeight:
     if (ratio >= minRatio and ratio <= maxRatio) or arguments.anysize:
         if (width <= minWidth and height <= minHeight):
+        if (width < minWidth or height < minHeight):
             fail = True
             # TODO maybe add verbose message for failed size check
         # if the anysize argument is used, auto-pass this check
@@ -546,7 +548,7 @@ def handleArguments():
     parser.add_argument(
         "--nodan", help="Do not download from danbooru", action="store_true")
     parser.add_argument(
-        "--nogel", help="Do not download from e local files onlyanbooru",
+        "--nogel", help="Do not download from gelbooru",
         action="store_true")
     parser.add_argument(
         "search", help="the string to search for. It is the exact same " +
