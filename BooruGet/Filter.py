@@ -38,16 +38,16 @@ class Filter(object):
         self.global_blacklist = []
         self.md5_nsfw_blacklist = []
         self.md5_global_blacklist = []
-        self.md5_nsfw_whitelistlist = []
-        self.md5_global_whitelistlist = []
+        self.md5_nsfw_whitelist = []
+        self.md5_global_whitelist = []
         self.nsfw_md5 = []
 
         self.structs = [
             self.nsfw_blacklist, self.global_blacklist, self.md5_nsfw_blacklist,
-            self.md5_global_blacklist, self.md5_nsfw_whitelistlist,
-            self.md5_global_whitelistlist, self.nsfw_md5]
+            self.md5_global_blacklist, self.md5_nsfw_whitelist,
+            self.md5_global_whitelist, self.nsfw_md5]
 
-        self.arguments = arguments;
+        self.arguments = arguments
 
     def load_black_and_white_lists(self):
         """
@@ -110,107 +110,118 @@ class Filter(object):
         ratio = width / float(height)
         tratio = self.arguments.target_width / float(self.arguments.target_height)
 
-        max_ratio = tratio + tratio * self.error
-        min_ratio = tratio - tratio * self.error
+        max_ratio = tratio + tratio * self.arguments.error
+        min_ratio = tratio - tratio * self.arguments.error
 
         # check if the width and height are acceptable
-        # if width <= maxWidth and width >= minWidth and height <= maxHeight and
-        # height >= minHeight:
-        if (ratio >= min_ratio and ratio <= max_ratio) or self.any_size:
-            if (width <= min_width and height <= min_height):
+        if (ratio >= min_ratio and ratio <= max_ratio) or \
+            self.arguments.any_size:
+            if width <= min_width and height <= min_height:
                 fail = True
                 # TODO maybe add verbose message for failed size check
+
             # if the anysize argument is used, auto-pass this check
-            if self.any_size:
+            if self.arguments.any_size:
                 fail = False
 
             # if nfsw is not allowed, check the tag blacklist
             for tag in self.nsfw_blacklist:
-                if tag in tag_String:
-                    if not arguments.nsfw:
+                if tag in self.arguments.tag_String:
+                    if not self.arguments.nsfw:
                         fail = True
                     mark_nsfw = True
-                    blacklistedTag.append(tag)
+                    blacklisted_tag.append(tag)
 
             # check if md5 is blacklisted
-            if md5 in MD5_nsfw_blacklist and not arguments.nsfw:
+            if md5 in self.md5_nsfw_blacklist and not self.arguments.nsfw:
                 fail = True
-                md5_Fail = True
+                md5_fail = True
 
             # check if md5 is blacklisted for nsfw
-            if md5 in MD5_global_blacklist:
+            if md5 in self.md5_global_blacklist:
                 fail = True
-                md5_Global_Fail = True
+                md5_global_fail = True
 
             # if nsfw is allowed or not allowed check the global blacklist
-            for tag in global_blacklist:
-                if tag in tagString:
+            for tag in self.global_blacklist:
+                if tag in self.arguments.tag_string:
                     fail = True
-                    globalBlacklistedTag.append(tag)
+                    global_blacklisted_tag.append(tag)
 
             # check if md5 is in the md5 whitelist
-            if md5 in MD5_NSFW_WHITELISTLIST:
-                md5_Pass = True
+            if md5 in self.md5_nsfw_whitelist:
+                md5_pass = True
 
-            # if nsfw and rating is safe or if md5 was in the whitelist return true
-            if(not(rating != "s" and not arguments.nsfw) and not fail) or md5_Pass:
-                if arguments.verbose:
+            # if nsfw and rating is safe or if md5 was in the whitelist
+            #return true
+            if(not(rating != "s" and not self.arguments.nsfw) and not fail) \
+                or md5_pass:
+                if self.arguments.verbose:
                     print "Accepted:"
                     print "\trating: " + rating
                     print "\tmd5: " + md5
-                    print "\tincluded in md5 nsfw blacklist: " + str(md5_Fail)
+                    print "\tincluded in md5 nsfw blacklist: " + str(md5_fail)
                     print "\tincluded in md5 global blacklist: " + \
-                        str(md5_Global_Fail)
-                    print "\tincluded in md5 whitelist: " + str(md5_Pass)
-                    print "\tfile extension: " + fExtension
-                    print "\tContained blacklisted tag: " + str(blacklistedTag)
+                        str(md5_global_fail)
+                    print "\tincluded in md5 whitelist: " + str(md5_pass)
+                    print "\tfile extension: " + file_extension
+                    print "\tContained blacklisted tag: " + str(blacklisted_tag)
                     print "\tContained global blacklisted tag: " + \
-                        str(globalBlacklistedTag)
+                        str(global_blacklisted_tag)
                     print "\self.target_width: " + str(width) + " (minimim: " + \
-                        str(minWidth) + ")"
-                    print "\self.target_height: " + str(height) + " (minumum: " + \
-                        str(maxHeight) + ")"
-                    print "\tRatio: " + str(ratio) + "(minimum: " + str(minRatio)\
-                        + " maximum: " + str(maxRatio) + ")"
-                    print "\tnsfw allowed: " + str(arguments.nsfw)
+                        str(min_width) + ")"
+                    print "\self.target_height: " + str(height) + \
+                        " (minumum: " + str(max_height) + ")"
+                    print "\tRatio: " + str(ratio) + "(minimum: " + str(min_ratio)\
+                        + " maximum: " + str(max_ratio) + ")"
+                    print "\tnsfw allowed: " + str(self.arguments.nsfw)
                     try:
-                        print "\tTag String: " + str(tString)
-                    except(UnicodeEncodeError):
+                        print "\tTag String: " + str(self.arguments.tag_string)
+                    except UnicodeEncodeError:
+                        # TODO handle unicode Error
                         pass
 
                 # if the rating is not s and it is not already marked as nsfw,
                 # mark as nsfw
-                if (not rating == "s") and (not str(md5) in NSFW_MD5):
-                    if arguments.verbose:
+                if (not rating == "s") and (not str(md5) in self.nsfw_md5):
+                    if self.arguments.verbose:
                         print "\t\tmarking as nsfw"
-                    NSFW_MD5.append(str(md5))
-                    while writeLock:
-                        time.sleep(500)
-                    writeLock = True
-                    f = open("._nsfw_md5", "a+")
-                    f.write(md5 + '\n')
-                    f.close()
-                    writeLock = False
-                    if arguments.verbose:
+                    self.nsfw_md5.append(str(md5))
+
+                    # TODO create a thread to manage the files properly
+                    #while writeLock:
+                        #time.sleep(500)
+
+                    #writeLock = True
+                    #f = open("._nsfw_md5", "a+")
+                    #f.write(md5 + '\n')
+                    #f.close()
+                    #writeLock = False
+
+                    if self.arguments.verbose:
                         print "\t\tdone"
+
                 # otherwise go through each tag. If the tag is recognized as nsfw
                 # mark the image as nsfw
-                elif mark_nsfw and (not str(md5) in NSFW_MD5):
-                    if arguments.verbose:
+                elif mark_nsfw and (not str(md5) in self.nsfw_md5):
+                    if self.arguments.verbose:
                         print "\t\tmarking as nsfw"
-                    NSFW_MD5.append(str(md5))
-                    while writeLock:
-                        time.sleep(500)
-                    writeLock = True
-                    f = open("._nsfw_md5", "a+")
-                    f.write(md5 + '\n')
-                    f.close()
-                    writeLock = False
-                    if arguments.verbose:
+                    self.nsfw_md5.append(str(md5))
+
+                    # TODO create a thread to manage the files properly
+                    #while writeLock:
+                        #time.sleep(500)
+                    #writeLock = True
+                    #f = open("._nsfw_md5", "a+")
+                    #f.write(md5 + '\n')
+                    #f.close()
+                    #writeLock = False
+
+                    if self.arguments.verbose:
                         print "\t\tdone"
                 return True
             else:
-                if arguments.verbose:
+                if self.arguments.verbose:
                     print "Skipped:"
                     print "\trating: " + rating
                     print "\tmd5: " + md5
@@ -238,26 +249,39 @@ class Filter(object):
                     return False
         else:
             if arguments.verbose:
-                print "failed size test"
-                print "Skipped:"
-                print "\trating: " + rating
-                print "\tmd5: " + md5
-                print "\tincluded in md5 blacklist: " + str(md5_Fail)
-                print "\tincluded in md5 global blacklist: " + str(md5_Global_Fail)
-                print "\tincluded in md5 whitelist: " + str(md5_Pass)
-                print "\tincluded in md5 whitelist: " + str(md5_Pass)
-                print "\tfile extension: " + fExtension
-                print "\tContained blacklisted tag: " + str(blacklistedTag)
-                print "\tContained global blacklisted tag: " + \
-                    str(globalBlacklistedTag)
-                print "\self.target_width: " + str(width) + " (minimim: " + str(minWidth) + \
-                    ")"
-                print "\self.target_height: " + str(height) + " (minumum: " + \
-                    str(maxHeight) + ")"
-                print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + \
-                    " minimum: " + str(minRatio) + \
-                    " maximum: " + str(maxRatio) + ")"
-                print "\tnsfw allowed: " + str(arguments.nsfw)
-                print "\tTag String: " + str(tString)
+                self.print_debug_message(False)
 
         return False
+
+        def print_debug_message(self, accepted):
+            """
+            Prints a debug message to stdout
+
+            accepted -> boolean: if the image was accepted by the filter or not
+            """
+            if accepted:
+                print "Accepted:"
+            else:
+                print "Skipped"
+            print "\trating: " + rating
+            print "\tmd5: " + md5
+            print "\tincluded in md5 nsfw blacklist: " + str(md5_fail)
+            print "\tincluded in md5 global blacklist: " + \
+                str(md5_global_fail)
+            print "\tincluded in md5 whitelist: " + str(md5_pass)
+            print "\tfile extension: " + file_extension
+            print "\tContained blacklisted tag: " + str(blacklisted_tag)
+            print "\tContained global blacklisted tag: " + \
+                str(global_blacklisted_tag)
+            print "\self.target_width: " + str(width) + " (minimim: " + \
+                str(min_width) + ")"
+            print "\self.target_height: " + str(height) + \
+                " (minumum: " + str(max_height) + ")"
+            print "\tRatio: " + str(ratio) + "(minimum: " + str(min_ratio)\
+                + " maximum: " + str(max_ratio) + ")"
+            print "\tnsfw allowed: " + str(self.arguments.nsfw)
+            try:
+                print "\tTag String: " + str(self.arguments.tag_string)
+            except UnicodeEncodeError:
+                # TODO handle unicode Error
+                pass
