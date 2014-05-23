@@ -1,18 +1,25 @@
+"""
+A module for filtering out various images downloaded from a Booru based offf of
+tagging, rating, and size
+
+When declaring a new instance, the following arguments from program launch must
+be provided in an argument:
+    target_width:       The width of the desired picture size
+    target_height:      The height of the desired picture size
+    error:              How much, as a percentage, an image can deviate from
+                        the target_width and target_height
+"""
 import sys
 import os
 
 
-class Filter:
+class Filter(object):
+    """
+    Runs a filter based off of several criteria
+    """
 
-    NSFW_BLACKLIST = []
-    GLOBAL_BLACKLIST = []
-    MD5_NSFW_BLACKLIST = []
-    MD5_GLOBAL_BLACKLIST = []
-    MD5_NSFW_WHITELISTLIST = []
-    MD5_GLOBAL_WHITELISTLIST = []
-    NSFW_MD5 = []
 
-    FILES = [
+    files = [
         os.path.join(".config", "nsfw_blacklist"), os.path.join(
             ".config", "global_blacklist"),
         os.path.join(".config", "md5_nsfw_blacklist"), os.path.join(
@@ -21,100 +28,122 @@ class Filter:
             ".config", "md5_global_whitelist"),
         os.path.join(".config", "_nsfw_md5")]
 
-    structs = [
-        NSFW_BLACKLIST, GLOBAL_BLACKLIST, MD5_NSFW_BLACKLIST,
-        MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST, MD5_GLOBAL_WHITELISTLIST,
-        NSFW_MD5]
 
-    def __init__(self):
-        pass
+    def __init__(self, arguments):
+        """
+        Arguments -> a dict of the arguments passed to the program
+        """
+        # TODO more detaild documentation
+        self.nsfw_blacklist = []
+        self.global_blacklist = []
+        self.md5_nsfw_blacklist = []
+        self.md5_global_blacklist = []
+        self.md5_nsfw_whitelistlist = []
+        self.md5_global_whitelistlist = []
+        self.nsfw_md5 = []
 
-    def loadBlackAndWhiteLists():
-        global arguments
+        self.structs = [
+            self.nsfw_blacklist, self.global_blacklist, self.md5_nsfw_blacklist,
+            self.md5_global_blacklist, self.md5_nsfw_whitelistlist,
+            self.md5_global_whitelistlist, self.nsfw_md5]
 
-        # list of al the blacklist/whitelist files. Each one corrisponds with
+        self.arguments = arguments;
+
+    def load_black_and_white_lists(self):
+        """
+        Loads the various black and white lists located in .config
+        """
+
+        # list of all the blacklist/whitelist files. Each one corrisponds with
         # it's data structure equivalent
-
-        for i in range(len(self.FILES)):
-
+        for i in range(len(self.files)):
             # if the file does not exist, create it
-            if not os.path.exists(self.FILES[i]):
-                f = open(self.FILES[i], "w")
+            if not os.path.exists(self.files[i]):
+                f = open(self.files[i], "w")
                 f.write('')
                 f.close()
 
             # then try and load the contents of the file
             try:
-                f = open(self.FILES[i])
+                f = open(self.files[i])
                 for line in f:
-                    structs[i].append(str(line.strip()))
+                    self.structs[i].append(str(line.strip()))
                 f.close()
             except Exception, e:
-                print "Error opening " + FILES[i]
+                #TODO add more specific error handling
+                print "Error opening " + self.files[i]
                 print e
                 sys.exit()
 
     def filterResult(self, result):
+        """
+        The method that actually does the filtering
+
+        result -> a result from a booru api
+        """
+
         md5 = result['md5']
-        fExtension = result['file_ext']
+        file_extension = result['file_ext']
         height = result['image_height']
         width = result['image_width']
         rating = result['rating']
-        tString = result['tag_string']
-        tagString = tString.split(" ")
+        tag_string = result['tag_string'].split(" ")
 
-        minWidth = self.targetWidth - self.targetWidth * self.error
-        minHeight = self.targetHeight - self.targetHeight * self.error
+        min_width = self.arguments.target_width - \
+           self.arguments.target_width * self.arguments.error
+        min_height = self.arguments.target_height - \
+            self.arguments.target_height * self.arguments.error
 
         # maxHeight may not be used...
-        maxHeight = self.targetHeight + self.targetHeight * self.error
+        max_height = self.arguments.target_height + \
+            self.arguments.target_height * self.arguments.error
 
         fail = False
         mark_nsfw = False
-        md5_Fail = False
-        md5_Global_Fail = False
-        md5_Pass = False
-        blacklistedTag = []
-        globalBlacklistedTag = []
+        md5_fail = False
+        md5_global_fail = False
+        md5_pass = False
+        blacklisted_tag = []
+        global_blacklisted_tag = []
 
         # calculate the ratio
         ratio = width / float(height)
-        tratio = self.targetWidth / float(self.targetHeight)
+        tratio = self.arguments.target_width / float(self.arguments.target_height)
 
-        maxRatio = tratio + tratio * self.error
-        minRatio = tratio - tratio * self.error
+        max_ratio = tratio + tratio * self.error
+        min_ratio = tratio - tratio * self.error
 
         # check if the width and height are acceptable
         # if width <= maxWidth and width >= minWidth and height <= maxHeight and
         # height >= minHeight:
-        if (ratio >= minRatio and ratio <= maxRatio) or self.anySize:
-            if (width <= minWidth and height <= minHeight):
+        if (ratio >= min_ratio and ratio <= max_ratio) or self.any_size:
+            if (width <= min_width and height <= min_height):
                 fail = True
                 # TODO maybe add verbose message for failed size check
             # if the anysize argument is used, auto-pass this check
-            if self.anySize:
+            if self.any_size:
                 fail = False
 
             # if nfsw is not allowed, check the tag blacklist
-            for tag in NSFW_BLACKLIST:
-                if tag in tagString:
+            for tag in self.nsfw_blacklist:
+                if tag in tag_String:
                     if not arguments.nsfw:
                         fail = True
                     mark_nsfw = True
                     blacklistedTag.append(tag)
 
             # check if md5 is blacklisted
-            if md5 in MD5_NSFW_BLACKLIST and not arguments.nsfw:
+            if md5 in MD5_nsfw_blacklist and not arguments.nsfw:
                 fail = True
                 md5_Fail = True
 
             # check if md5 is blacklisted for nsfw
-            if md5 in MD5_GLOBAL_BLACKLIST:
+            if md5 in MD5_global_blacklist:
                 fail = True
                 md5_Global_Fail = True
 
             # if nsfw is allowed or not allowed check the global blacklist
-            for tag in GLOBAL_BLACKLIST:
+            for tag in global_blacklist:
                 if tag in tagString:
                     fail = True
                     globalBlacklistedTag.append(tag)
@@ -137,9 +166,9 @@ class Filter:
                     print "\tContained blacklisted tag: " + str(blacklistedTag)
                     print "\tContained global blacklisted tag: " + \
                         str(globalBlacklistedTag)
-                    print "\self.targetWidth: " + str(width) + " (minimim: " + \
+                    print "\self.target_width: " + str(width) + " (minimim: " + \
                         str(minWidth) + ")"
-                    print "\self.targetHeight: " + str(height) + " (minumum: " + \
+                    print "\self.target_height: " + str(height) + " (minumum: " + \
                         str(maxHeight) + ")"
                     print "\tRatio: " + str(ratio) + "(minimum: " + str(minRatio)\
                         + " maximum: " + str(maxRatio) + ")"
@@ -194,9 +223,9 @@ class Filter:
                     print "\tContained blacklisted tag: " + str(blacklistedTag)
                     print "\tContained global blacklisted tag: " + \
                         str(globalBlacklistedTag)
-                    print "\self.targetWidth: " + str(width) + " (minimim: " + \
+                    print "\self.target_width: " + str(width) + " (minimim: " + \
                         str(minWidth) + ")"
-                    print "\self.targetHeight: " + str(height) + " (minumum: " + \
+                    print "\self.target_height: " + str(height) + " (minumum: " + \
                         str(maxHeight) + ")"
                     print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + \
                         " minimum: " + str(minRatio) + " maximum: " + \
@@ -221,9 +250,9 @@ class Filter:
                 print "\tContained blacklisted tag: " + str(blacklistedTag)
                 print "\tContained global blacklisted tag: " + \
                     str(globalBlacklistedTag)
-                print "\self.targetWidth: " + str(width) + " (minimim: " + str(minWidth) + \
+                print "\self.target_width: " + str(width) + " (minimim: " + str(minWidth) + \
                     ")"
-                print "\self.targetHeight: " + str(height) + " (minumum: " + \
+                print "\self.target_height: " + str(height) + " (minumum: " + \
                     str(maxHeight) + ")"
                 print "\tRatio: " + str(ratio) + " (target: " + str(tratio) + \
                     " minimum: " + str(minRatio) + \

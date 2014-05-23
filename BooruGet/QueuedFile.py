@@ -1,19 +1,19 @@
+"""
+Frank Hrach
+QueuedFile.py
+"""
+
 import os
 
-"""
-Represents a file to be downloaded, it's much cleaner as a class than a goddamn
-array
-"""
-class QueuedFile:
-    URL
-    fileName
-    extension
-    destination
-    path
+class QueuedFile(object):
+    """
+    Represents a file to be downloaded, it's much cleaner as a class than a goddamn
+    array
+    """
 
-    def __init__(self, URL, fileName, extension, destination):
-        self.URL = URL
-        self.fileName = fileName
+    def __init__(self, url, file_name, extension, destination):
+        self.url = url
+        self.file_name = file_name
         self.extension = extension
         self.destination = destination
-        path = os.path.join(destination, fileName + extension)
+        self.path = os.path.join(destination, file_name + extension)

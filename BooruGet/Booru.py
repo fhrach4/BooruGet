@@ -4,16 +4,19 @@ Booru.py
 """
 
 from abc import ABCMeta, abstractmethod
-import urllib
-import os
 
-class Booru:
+class Booru(object):
+    """
+    Abstract class which represents a Booru site.
+
+    I might be using python wrong
+    """
     __metaclass = ABCMeta
 
     URL = None
 
     #argument variables
-    anySize = False;
+    any_size = False
 
     targetWidth = -1
     targetHeight = -1
@@ -21,16 +24,16 @@ class Booru:
 
     @abstractmethod
     def __init__(self, width, height, error, arguments):
-        self.targetWidth = width
-        self.targetHeight = height
+        self.target_width = width
+        self.target_height = height
         self.error = error
 
-        self.anySize = arguments.anysize
+        self.any_size = arguments.anysize
 
 
 
     @abstractmethod
-    def getResults(self):
+    def get_results(self):
         pass
 
 

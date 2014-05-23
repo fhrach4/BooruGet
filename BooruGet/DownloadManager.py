@@ -6,29 +6,59 @@ DownloadManager.py
 import urllib
 import os
 import QueuedFile
-import threadding
+import threading
 
-Queued_Files
+class DownloadManager(object):
+    """
+    Download the supplied url and saves it to the supplied path
+    """
+    #maxDownloads
+    #currentDownloads;
+    #run
+    #queue
 
-"""
-Download the supplied url and saves it to the supplied path
-"""
-class DownloadManager:
-    maxDownloads
-    run
-    queue
+    def __init__(self, event):
+        self.max_downloads = 4
+        self.current_downloads = 0
+        self.queue = []
+        self.should_run = True
+        self.event = event
 
-    def __init__(self):
-        self.maxDownloads = 4
-        run = True;
 
-    def download(self, url, fileName, extension,  destination):
-        path = os.path.join(destination, fileName + "." + extension)
-        if not os.path.exists(path):
-            urllib.urlretrieve(url + fileName + extension, path)
+    def enqueue_file(self, url, file_name, extension, destination):
+        """
+        Adds a file to the queue
+        """
+        self.queue.append(
+            QueuedFile.QueuedFile(url, file_name, extension, destination))
 
-    def enqueueFile( self, URL, fileName, extension, destination):
-        queue.add(File(URL, fileName, extension, destination))
+    def start_downloader(self):
+        """
+        Manages 4 downloads with a queue.
+        Should be started as a thread
+        """
 
-    def main():
+        # run until main thread says it should no longer run
+        while self.should_run:
 
+            if self.current_downloads >= self.max_downloads:
+                thread = threading.Thread(target=download, args=self.queue.pop())
+            else:
+                # wait until download thread notifies all
+                self.event.wait()
+
+
+def download(queued_file, event):
+    """
+    Downloads
+    """
+    path = os.path.join(queued_file.destination, queued_file.file_name \
+        + "." + queued_file.extension)
+
+    # download only if the file does not already exist
+    if not os.path.exists(path):
+        urllib.urlretrieve(queued_file.url + queued_file.file_name \
+            + queued_file.extension, path)
+
+    # Notify the controller that we have finished
+    event.notifyAll()
