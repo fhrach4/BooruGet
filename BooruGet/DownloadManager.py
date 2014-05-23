@@ -25,12 +25,13 @@ class DownloadManager(object):
         self.event = event
 
 
-    def enqueue_file(self, url, file_name, extension, destination):
+    def enqueue_file(self, image, destination):
         """
         Adds a file to the queue
         """
         self.queue.append(
-            QueuedFile.QueuedFile(url, file_name, extension, destination))
+            QueuedFile.QueuedFile(image["url"], image["file_name"], \
+            image["extension"], destination))
 
     def start_downloader(self):
         """
