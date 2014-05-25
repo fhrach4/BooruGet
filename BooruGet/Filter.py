@@ -49,6 +49,8 @@ class Filter(object):
 
         self.arguments = arguments
 
+        self.load_black_and_white_lists()
+
     def load_black_and_white_lists(self):
         """
         Loads the various black and white lists located in .config
@@ -113,7 +115,8 @@ class Filter(object):
         max_ratio = tratio + tratio * self.arguments.error
         min_ratio = tratio - tratio * self.arguments.error
 
-        # check if the width and height are acceptable
+        # check if the width and height are acceptable, or automatically pass
+        # if the anysize argument is passed
         if (ratio >= min_ratio and ratio <= max_ratio) or \
             self.arguments.any_size:
             if width <= min_width and height <= min_height:
@@ -158,9 +161,9 @@ class Filter(object):
                 or md5_pass:
                 if self.arguments.verbose:
                     values = [True, rating, md5, md5_fail, md5_global_fail,
-                            md5_pass, file_extension, blacklisted_tag,
-                            global_blacklisted_tag, width, min_width, height,
-                            max_height, ratio, min_ratio, max_ratio]
+                              md5_pass, file_extension, blacklisted_tag,
+                              global_blacklisted_tag, width, min_width, height,
+                              max_height, ratio, min_ratio, max_ratio]
                     self.print_debug_message(values)
 
                 # if the rating is not s and it is not already marked as nsfw,
@@ -169,35 +172,17 @@ class Filter(object):
                     if self.arguments.verbose:
                         print "\t\tmarking as nsfw"
                     self.nsfw_md5.append(str(md5))
-
-                    # TODO create a thread to manage the files properly
-                    #while writeLock:
-                        #time.sleep(500)
-
-                    #writeLock = True
-                    #f = open("._nsfw_md5", "a+")
-                    #f.write(md5 + '\n')
-                    #f.close()
-                    #writeLock = False
+                    self.update_md5_black_and_white_lists()
 
                     if self.arguments.verbose:
                         print "\t\tdone"
 
                 # otherwise go through each tag. If the tag is recognized as nsfw
-                # mark the image as nsfw
                 elif mark_nsfw and (not str(md5) in self.nsfw_md5):
                     if self.arguments.verbose:
                         print "\t\tmarking as nsfw"
                     self.nsfw_md5.append(str(md5))
-
-                    # TODO create a thread to manage the files properly
-                    #while writeLock:
-                        #time.sleep(500)
-                    #writeLock = True
-                    #f = open("._nsfw_md5", "a+")
-                    #f.write(md5 + '\n')
-                    #f.close()
-                    #writeLock = False
+                    self.update_md5_black_and_white_lists()
 
                     if self.arguments.verbose:
                         print "\t\tdone"
@@ -205,16 +190,16 @@ class Filter(object):
             else:
                 if self.arguments.verbose:
                     values = [False, rating, md5, md5_fail, md5_global_fail,
-                            md5_pass, file_extension, blacklisted_tag,
-                            global_blacklisted_tag, width, min_width, height,
-                            max_height, ratio, min_ratio, max_ratio]
+                              md5_pass, file_extension, blacklisted_tag,
+                              global_blacklisted_tag, width, min_width, height,
+                              max_height, ratio, min_ratio, max_ratio]
                     self.print_debug_message(values)
         else:
             if self.arguments.verbose:
                 values = [False, rating, md5, md5_fail, md5_global_fail,
-                        md5_pass, file_extension, blacklisted_tag,
-                        global_blacklisted_tag, width, min_width, height,
-                        max_height, ratio, min_ratio, max_ratio]
+                          md5_pass, file_extension, blacklisted_tag,
+                          global_blacklisted_tag, width, min_width, height,
+                          max_height, ratio, min_ratio, max_ratio]
                 self.print_debug_message(values)
 
         return False
@@ -275,3 +260,21 @@ class Filter(object):
         except UnicodeEncodeError:
             # TODO handle unicode Error
             pass
+
+    def update_md5_black_and_white_lists(self):
+        """
+        add new information to the black and white list files
+        """
+
+        for i in range(len(self.files)):
+
+            # try and load the contents of the file
+            try:
+                f = open(self.files[i])
+                for line in f:
+                    self.structs[i].append(str(line))
+                f.close()
+            except Exception, e:
+                print "Error opening " + self.files[i]
+                print e
+                sys.exit()

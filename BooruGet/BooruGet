@@ -17,6 +17,9 @@ import sys
 import time
 import math
 
+import Gelbooru
+import DownloadManager
+
 from subprocess import call
 
 threads = []
@@ -38,9 +41,6 @@ FILES = [
     os.path.join(".config", "md5_nsfw_whitelist"), os.path.join(
         ".config", "md5_global_whitelist"),
     os.path.join(".config", "_nsfw_md5")]
-
-# TODO switch this to load from the config file
-OUT_DIR = src;
 
 # file content arrays
 NSFW_BLACKLIST = []
@@ -79,61 +79,6 @@ def getResultsJSON(url, pageNum, numPerPage, tags, login, key):
         time.sleep(30)
         getResultsJSON(url, pageNum, numPerPage, tags, login, key)
     return None
-
-
-def getResultsXML(url, pageNum, numPerPage, tags):
-    global arguments
-
-
-def downloadGel(searchString, tWidth, tHeight, error):
-    global arguments
-    global numthreads
-
-    url = "http://gelbooru.com/index.php?page=dapi&s=post&q=index"
-
-    numPerPage = 100
-    numPages = 1000
-
-    root = getResultsXML(url, 1, numPerPage, searchString)
-    numPages = int(math.ceil(int(root.attrib["count"]) / float(len(root))))
-
-    time.sleep(0.2)
-    for i in range(1, numPages + 1):
-
-        # if call to exit is found, break out of this loop now
-        if exitapp:
-            break
-
-        root = getResultsXML(url, i, numPerPage, searchString)
-
-        if arguments.verbose:
-            print "Gelbooru: current page: " + str(i) + " (" + \
-                str(i * numPerPage) + ") out of " + str(numPages) + \
-                " pages(" + root.attrib["count"] + ")"
-
-        try:
-            for child in root:
-                #TODO check to make sure result has data
-                image = {}
-                image["md5"] = child.attrib["md5"]
-                image["image_height"] = int(child.attrib["height"])
-                image["image_width"] = int(child.attrib["width"])
-                image["rating"] = child.attrib["rating"]
-                image["tag_string"] = child.attrib["tags"]
-                image["file_ext"] = child.attrib["file_url"].split(".")[3]
-
-                if filterResult(image, tWidth, tHeight, error):
-                    while numthreads >= 4:
-                        time.sleep(1)
-                    t = threading.Thread(target=downloadImage, args=[
-                        child.attrib["file_url"], searchString])
-                    numthreads += 1
-                    t.start()
-                time.sleep(0.2)
-        except(IndexError):
-            print "End of results"
-            break
-    print "Gelbooru: Finished searching"
 
 
 def downloadDan(searchString, tWidth, tHeight, error, login, key):
@@ -198,47 +143,16 @@ def downloadDan(searchString, tWidth, tHeight, error, login, key):
 
     print "Danbooru: Finished searching"
 
-def downloadImage(url, location):
-    global numthreads
-    call(["wget", "-q", "-N", "-P" + location, url])
-    numthreads -= 1
 
-
-def updateMD5BlackAndWhiteLists():
-    # list of al the blacklist/whitelist files. Each one corrisponds with
-    # it's data structure equivalent
-    structs = [
-        MD5_NSFW_BLACKLIST, MD5_GLOBAL_BLACKLIST, MD5_NSFW_WHITELISTLIST,
-        MD5_GLOBAL_WHITELISTLIST]
-
-    for i in range(len(FILES)):
-
-        # try and load the contents of the file
-        try:
-            f = open(FILES[i])
-            for line in f:
-                structs[i].append(str(line))
-            f.close()
-        except Exception, e:
-            print "Error opening " + FILES[i]
-            print e
-            sys.exit()
-
-def initDirectories():
-    global OUT_DIR
-    if not os.path.exists(OUT_DIR):
- S
- os.mkdir(OUT_DIR)
-
-def loadConfigfile():
-    global arguments
+def load_config_file():
     global CONFIG
 
     if not os.path.exists(".config"):
         os.mkdir(".config")
 
-    validSettings = {"username": None, "apikey": None}
+    validSettings = {"username": None, "apikey": None, "outdir": None}
 
+    # if the config file does not exist, create it
     if not os.path.exists(CONFIG):
         f = open(CONFIG, "w")
         f.write('username \n')
@@ -253,11 +167,13 @@ def loadConfigfile():
     except:
         #this is most likely not a problem
         pass
-    arguments = validSettings
+    return validSettings
 
 
 def handleArguments():
-    global arguments
+    """
+    returns a list of the arguments supplied
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--anysize", help="Allow any sized image. " +
@@ -297,41 +213,37 @@ def handleArguments():
         "search", help="the string to search for. It is the exact same " +
         "string that would be entered into the site")
 
-    arguments = parser.parse_args()
+    return parser.parse_args()
 
 
 def main():
     global arguments
     global exitapp
+
     try:
-        loadConfigfile()
-        loadBlackAndWhiteLists()
-        handleArguments()
+        load_config_file()
+        args = handleArguments()
+
+        #TODO creat the event handler for theadding
+        dl_manager = DownloadManager.DownloadManager(None)
+
+        # TODO add Danbooru shit
+        sites = []
+        if not arguments.nogel:
+            sites.append(Gelbooru.Gelbooru(args, download_manager))
+
         if arguments.verbose:
             print arguments
-        search = arguments.search
-        width = arguments.width
-        height = arguments.height
-        error = arguments.error
-        username = arguments.username
-        apikey = arguments.apikey
-        activeThreads = []
+
         if not arguments.localonly:
             print "Starting downloads"
-            if not arguments.nogel:
-                gel = threading.Thread(
-                    target=downloadGel, args=[search, width, height, error])
-                gel.start()
-                activeThreads.append(gel)
-            if not arguments.nodan:
-                dan = threading.Thread(
-                    target=downloadDan, args=[
-                        search, width, height, error, username, apikey])
-                dan.start()
-                activeThreads.append(dan)
-        while threading.active_count() > 1:
-            time.sleep(0.1)
-    except (KeyboardInterrupt, SystemExit):
+
+        for site in sites:
+            site.get_results()
+
+    except(KeyboardInterrupt, SystemExit):
         exitapp = True
         raise
+
+# Entry Point
 main()
