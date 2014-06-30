@@ -1,0 +1,249 @@
+#!/usr/bin/python2
+"""
+Frank Hrach
+BooruGet
+Sun Mar  9 22:20:07 EDT 2014
+"""
+
+
+import argparse
+import httplib2
+import json
+import xml.etree.ElementTree as ET
+import threading
+import os
+import platform
+import sys
+import time
+import math
+
+import Gelbooru
+import DownloadManager
+
+from subprocess import call
+
+threads = []
+numthreads = 0
+writeLock = False
+exitapp = False
+
+platform = platform.system()
+
+arguments = {}
+
+# file names
+CONFIG = os.path.join(".config", "BooruGet.config")
+FILES = [
+    os.path.join(".config", "nsfw_blacklist"), os.path.join(
+        ".config", "global_blacklist"),
+    os.path.join(".config", "md5_nsfw_blacklist"), os.path.join(
+        ".config", "md5_global_blacklist"),
+    os.path.join(".config", "md5_nsfw_whitelist"), os.path.join(
+        ".config", "md5_global_whitelist"),
+    os.path.join(".config", "_nsfw_md5")]
+
+# file content arrays
+NSFW_BLACKLIST = []
+GLOBAL_BLACKLIST = []
+MD5_NSFW_BLACKLIST = []
+MD5_GLOBAL_BLACKLIST = []
+MD5_NSFW_WHITELISTLIST = []
+MD5_GLOBAL_WHITELISTLIST = []
+NSFW_MD5 = []
+
+
+def getResultsJSON(url, pageNum, numPerPage, tags, login, key):
+    global arguments
+    # create connection
+    if arguments.verbose:
+        print "Danbooru: Reqesting page"
+    try:
+        connection = httplib2.Http(".cache")
+        header = "posts.json?login=" + login + "&api_key=" + key + \
+            "&limit=" + str(numPerPage) + "&"
+        # make request
+        if arguments.verbose:
+            print "Making request: " + url + header + "tags=" + tags + \
+                "&page=" + str(pageNum)
+        res, content = connection.request(
+            url + header + "tags=" + tags + "&page=" + str(pageNum))
+        if len(content) >= 0 and res.status == 200:
+            if arguments.verbose:
+                print "Response recieved"
+            return json.loads(content)
+        else:
+            return None
+    except (httplib2.ServerNotFoundError):
+        print "Could not contact server at danbooru.donmai.us"
+        print "Retrying in 30 seconds"
+        time.sleep(30)
+        getResultsJSON(url, pageNum, numPerPage, tags, login, key)
+    return None
+
+
+def downloadDan(searchString, tWidth, tHeight, error, login, key):
+    global numthreads
+    global threads
+    global arguments
+
+    urlbase = "http://danbooru.donmai.us/"
+    numPerPage = 100
+    numPages = 1000
+
+    for i in range(1, numPages + 1):
+
+        # if call to exit is found, break out of this loop now
+        if exitapp:
+            break
+
+        time.sleep(0.2)
+        if arguments.verbose:
+            print "Danbooru: current page: " + str(i) + " of ~1000 (" + \
+                str(i * numPerPage) + ")"
+        result = getResultsJSON(
+            urlbase, i, numPerPage, searchString, login, key)
+
+        if result is None or len(result) == 0:
+            if arguments.verbose:
+                print "Breaking..."
+                if result is None:
+                    print "\t result was NoneType"
+                elif len(result) == 0:
+                    print "\t length of result was 0"
+                else:
+                    print "\t an unknown error has happened"
+            break
+        for j in range(numPerPage):
+            try:
+                result[j]["md5"]
+                if filterResult(result[j], tWidth, tHeight, error):
+                    while numthreads >= 4:
+                        time.sleep(1)
+                    md5 = result[j]["md5"]
+                    fExtension = result[j]["file_ext"]
+                    url = urlbase + "/data/" + md5 + "." + fExtension
+                    t = threading.Thread(
+                        target=downloadImage, args=[url, searchString])
+                    numthreads += 1
+                    t.start()
+            except (IndexError, TypeError):
+                print "Less than 100 images in this result ("\
+                    + str(len(result)) + ")"
+                i = numPages + 2
+                j = numPerPage
+                break
+            except (KeyError):
+                if not os.path.exists("error.log"):
+                    f = open("error.log", "w")
+                    f.write('')
+                    f.close()
+                f = file("error.log", 'w')
+                f.write(str(result))
+                f.close()
+
+    print "Danbooru: Finished searching"
+
+
+def load_config_file():
+    global CONFIG
+
+    if not os.path.exists(".config"):
+        os.mkdir(".config")
+
+    validSettings = {"username": None, "apikey": None, "outdir": None}
+
+    # if the config file does not exist, create it
+    if not os.path.exists(CONFIG):
+        f = open(CONFIG, "w")
+        f.write('username \n')
+        f.write('apikey ')
+        f.close()
+
+    f = open(CONFIG, "r")
+    try:
+        for line in f:
+            current = line.strip().split(" ")
+            validSettings[current[0]] = current[1]
+    except:
+        #this is most likely not a problem
+        pass
+    return validSettings
+
+
+def handleArguments():
+    """
+    returns a list of the arguments supplied
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-a", "--anysize", help="Allow any sized image. " +
+        "Default is to only allow images equal to or larger than the " +
+        "specified screen size", action="store_true")
+    parser.add_argument(
+        "-u", "--username", default=arguments["username"],
+        help="The username you use to log into danbooru this overrides what " +
+        "is found in the config file if specified")
+    parser.add_argument(
+        "-k", "--apikey", default=arguments["apikey"],
+        help="Your api key can be found on your user page. This overrides " +
+        "what is found in the config file if specified")
+    parser.add_argument(
+        "-w", "--width", help="the width of your screen in pixels", default=-1,
+        type=int)
+    parser.add_argument(
+        "-t", "--height", help="the height of your screen in pixels",
+        default=-1, type=int)
+    parser.add_argument(
+        "-e", "--error", help="the percentage error allowed for the image." +
+        "Default is 5 percent", default=0.05, type=float)
+    parser.add_argument(
+        "-v", "--verbose", help="prints debug output", action="store_true")
+    parser.add_argument(
+        "--nsfw", help="Allow nsfw results, default is disallow",
+        action="store_true")
+    parser.add_argument(
+        "-l", "--localonly", help="Do not download, use local files only",
+        action="store_true")
+    parser.add_argument(
+        "--nodan", help="Do not download from danbooru", action="store_true")
+    parser.add_argument(
+        "--nogel", help="Do not download from e local files onlyanbooru",
+        action="store_true")
+    parser.add_argument(
+        "search", help="the string to search for. It is the exact same " +
+        "string that would be entered into the site")
+
+    return parser.parse_args()
+
+
+def main():
+    global arguments
+    global exitapp
+
+    try:
+        load_config_file()
+        args = handleArguments()
+
+        #TODO creat the event handler for theadding
+        dl_manager = DownloadManager.DownloadManager(None)
+
+        # TODO add Danbooru shit
+        sites = []
+        if not arguments.nogel:
+            sites.append(Gelbooru.Gelbooru(args, download_manager))
+
+        if arguments.verbose:
+            print arguments
+
+        if not arguments.localonly:
+            print "Starting downloads"
+
+        for site in sites:
+            site.get_results()
+
+    except(KeyboardInterrupt, SystemExit):
+        exitapp = True
+        raise
+
+# Entry Point
+main()

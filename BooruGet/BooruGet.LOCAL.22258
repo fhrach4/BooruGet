@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python2
 """
 Frank Hrach
 BooruGet
@@ -10,6 +10,7 @@ import threading
 import os
 import platform
 import time
+import threading
 
 import DownloadManager
 from arguments import Arguments
@@ -49,7 +50,7 @@ def initDirectories():
     if not os.path.exists(OUT_DIR):
         os.mkdir(OUT_DIR)
 
-def load_config_file():
+def loadConfigfile():
     """
     Loads settings from the config file. Creates a blank config file if it
     does not exist already
@@ -61,7 +62,6 @@ def load_config_file():
 
     valid_settings = {"username": None, "apikey": None}
 
-    # if the config file does not exist, create it
     if not os.path.exists(CONFIG):
         f = open(CONFIG, "w")
         f.write('username \n')
@@ -87,7 +87,6 @@ def handleArguments(arguments):
 
     returns -> the dictionary provided updated with the command arguments
     """
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--anysize", help="Allow any sized image. " +
@@ -137,7 +136,7 @@ def main():
     """
     global OUT_DIR
     try:
-        arguments = load_config_file()
+        arguments = loadConfigfile()
         arguments = handleArguments(arguments)
 
         args = Arguments(arguments['anysize'], arguments['height'], \
@@ -171,6 +170,4 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         dl_manager.should_run = False
         raise
-
-# Entry Point
 main()

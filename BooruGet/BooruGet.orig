@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python2
 """
 Frank Hrach
 BooruGet
@@ -10,6 +10,21 @@ import threading
 import os
 import platform
 import time
+<<<<<<< HEAD
+import threading
+=======
+import math
+
+import Gelbooru
+import DownloadManager
+
+from subprocess import call
+
+threads = []
+numthreads = 0
+writeLock = False
+exitapp = False
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
 
 import DownloadManager
 from arguments import Arguments
@@ -27,9 +42,12 @@ FILES = [
         ".config", "md5_global_whitelist"),
     os.path.join(".config", "_nsfw_md5")]
 
+<<<<<<< HEAD
 # TODO switch this to load from the config file
 OUT_DIR = "src"
 
+=======
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
 # file content arrays
 NSFW_BLACKLIST = []
 GLOBAL_BLACKLIST = []
@@ -40,6 +58,7 @@ MD5_GLOBAL_WHITELISTLIST = []
 NSFW_MD5 = []
 
 
+<<<<<<< HEAD
 def initDirectories():
     """
     Checks to see if the directories used by the program exist, and creates
@@ -49,17 +68,116 @@ def initDirectories():
     if not os.path.exists(OUT_DIR):
         os.mkdir(OUT_DIR)
 
-def load_config_file():
+def loadConfigfile():
     """
     Loads settings from the config file. Creates a blank config file if it
     does not exist already
     """
+=======
+def getResultsJSON(url, pageNum, numPerPage, tags, login, key):
+    global arguments
+    # create connection
+    if arguments.verbose:
+        print "Danbooru: Reqesting page"
+    try:
+        connection = httplib2.Http(".cache")
+        header = "posts.json?login=" + login + "&api_key=" + key + \
+            "&limit=" + str(numPerPage) + "&"
+        # make request
+        if arguments.verbose:
+            print "Making request: " + url + header + "tags=" + tags + \
+                "&page=" + str(pageNum)
+        res, content = connection.request(
+            url + header + "tags=" + tags + "&page=" + str(pageNum))
+        if len(content) >= 0 and res.status == 200:
+            if arguments.verbose:
+                print "Response recieved"
+            return json.loads(content)
+        else:
+            return None
+    except (httplib2.ServerNotFoundError):
+        print "Could not contact server at danbooru.donmai.us"
+        print "Retrying in 30 seconds"
+        time.sleep(30)
+        getResultsJSON(url, pageNum, numPerPage, tags, login, key)
+    return None
+
+
+def downloadDan(searchString, tWidth, tHeight, error, login, key):
+    global numthreads
+    global threads
+    global arguments
+
+    urlbase = "http://danbooru.donmai.us/"
+    numPerPage = 100
+    numPages = 1000
+
+    for i in range(1, numPages + 1):
+
+        # if call to exit is found, break out of this loop now
+        if exitapp:
+            break
+
+        time.sleep(0.2)
+        if arguments.verbose:
+            print "Danbooru: current page: " + str(i) + " of ~1000 (" + \
+                str(i * numPerPage) + ")"
+        result = getResultsJSON(
+            urlbase, i, numPerPage, searchString, login, key)
+
+        if result is None or len(result) == 0:
+            if arguments.verbose:
+                print "Breaking..."
+                if result is None:
+                    print "\t result was NoneType"
+                elif len(result) == 0:
+                    print "\t length of result was 0"
+                else:
+                    print "\t an unknown error has happened"
+            break
+        for j in range(numPerPage):
+            try:
+                result[j]["md5"]
+                if filterResult(result[j], tWidth, tHeight, error):
+                    while numthreads >= 4:
+                        time.sleep(1)
+                    md5 = result[j]["md5"]
+                    fExtension = result[j]["file_ext"]
+                    url = urlbase + "/data/" + md5 + "." + fExtension
+                    t = threading.Thread(
+                        target=downloadImage, args=[url, searchString])
+                    numthreads += 1
+                    t.start()
+            except (IndexError, TypeError):
+                print "Less than 100 images in this result ("\
+                    + str(len(result)) + ")"
+                i = numPages + 2
+                j = numPerPage
+                break
+            except (KeyError):
+                if not os.path.exists("error.log"):
+                    f = open("error.log", "w")
+                    f.write('')
+                    f.close()
+                f = file("error.log", 'w')
+                f.write(str(result))
+                f.close()
+
+    print "Danbooru: Finished searching"
+
+
+def load_config_file():
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
     global CONFIG
 
     if not os.path.exists(".config"):
         os.mkdir(".config")
 
+<<<<<<< HEAD
     valid_settings = {"username": None, "apikey": None}
+=======
+    validSettings = {"username": None, "apikey": None, "outdir": None}
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
 
     # if the config file does not exist, create it
     if not os.path.exists(CONFIG):
@@ -76,6 +194,7 @@ def load_config_file():
     except:
         #this is most likely not a problem
         pass
+<<<<<<< HEAD
     return valid_settings
 
 
@@ -86,8 +205,15 @@ def handleArguments(arguments):
     arguments -> a dictionary containg any arguments from the config file
 
     returns -> the dictionary provided updated with the command arguments
-    """
+=======
+    return validSettings
 
+
+def handleArguments():
+    """
+    returns a list of the arguments supplied
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--anysize", help="Allow any sized image. " +
@@ -127,6 +253,7 @@ def handleArguments(arguments):
         "search", help="the string to search for. It is the exact same " +
         "string that would be entered into the site")
 
+<<<<<<< HEAD
     return dict(list(arguments.items()) +
         list(vars(parser.parse_args()).items()))
 
@@ -137,7 +264,7 @@ def main():
     """
     global OUT_DIR
     try:
-        arguments = load_config_file()
+        arguments = loadConfigfile()
         arguments = handleArguments(arguments)
 
         args = Arguments(arguments['anysize'], arguments['height'], \
@@ -170,6 +297,38 @@ def main():
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         dl_manager.should_run = False
+=======
+    return parser.parse_args()
+
+
+def main():
+    global arguments
+    global exitapp
+
+    try:
+        load_config_file()
+        args = handleArguments()
+
+        #TODO creat the event handler for theadding
+        dl_manager = DownloadManager.DownloadManager(None)
+
+        # TODO add Danbooru shit
+        sites = []
+        if not arguments.nogel:
+            sites.append(Gelbooru.Gelbooru(args, download_manager))
+
+        if arguments.verbose:
+            print arguments
+
+        if not arguments.localonly:
+            print "Starting downloads"
+
+        for site in sites:
+            site.get_results()
+
+    except(KeyboardInterrupt, SystemExit):
+        exitapp = True
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
         raise
 
 # Entry Point

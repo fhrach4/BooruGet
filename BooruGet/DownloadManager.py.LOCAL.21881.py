@@ -20,13 +20,6 @@ class DownloadManager(Thread):
 
     def __init__(self, event, root):
 
-
-        """
-        Constructor for DownloadManager
-
-        event -> the event manager for threadding
-        out_dir -> the location of the download folders
-        """
         Thread.__init__(self)
 
         self.max_downloads = 4

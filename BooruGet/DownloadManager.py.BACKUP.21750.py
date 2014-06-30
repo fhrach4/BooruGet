@@ -18,23 +18,30 @@ class DownloadManager(Thread):
     #run
     #queue
 
+<<<<<<< HEAD
     def __init__(self, event, root):
 
+        Thread.__init__(self)
 
+=======
+    def __init__(self, event, out_dir):
         """
         Constructor for DownloadManager
 
         event -> the event manager for threadding
         out_dir -> the location of the download folders
         """
-        Thread.__init__(self)
-
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
         self.max_downloads = 4
         self.current_downloads = 0
         self.queue = []
         self.should_run = True
         self.event = event
+<<<<<<< HEAD
         self.root = root
+=======
+        self.out_dir = out_dir
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
 
 
     def enqueue_file(self, image, destination):
@@ -69,8 +76,18 @@ class DownloadManager(Thread):
                 # wait until download thread notifies all
                 self.event.wait()
 
+<<<<<<< HEAD
     def run(self):
         self.start_downloader()
+=======
+    def init_outdir(self):
+        """
+        Creates the output directory if it does not already exist
+        """
+        if not os.path.exists(self.out_dir):
+            os.mkdir(self.out_dir)
+
+>>>>>>> b4b8422978fb64402741b359115042c13272951f
 
 
     def download(self, queued_file, event):
