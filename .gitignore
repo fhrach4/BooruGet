@@ -2,3 +2,7 @@ BooruGet/.config
 *.log
 *.swp
 Booruget/tags
+BooruGet/*.pyc
+BooruGet/src/*
+BooruGet/.cache/*
+BooruGet/__pycache__*

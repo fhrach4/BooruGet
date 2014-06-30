@@ -54,7 +54,7 @@ class GelbooruDownloader(Booru, Thread):
             connection = httplib2.Http(".cache")
             res, content = connection.request(
                 self.url + "&tags=" + self.search_string + "&pid=" +
-                str(self.page_num) + "&limit=" + str(self.number_per_page))
+                str(self.page_num) + "&limit=" + str(self.number_of_pages))
             if self.verbose:
                 print("\tResults recieved")
             if not res.status == 200:
@@ -90,9 +90,11 @@ class GelbooruDownloader(Booru, Thread):
         # sleep to ensure we are not spamming the server
         time.sleep(0.2)
 
-        print(self.number_of_pages + 1)
         for i in range(0, self.number_of_pages + 1):
-            print( i )
+
+            # if call to exit is found, break out of this loop now
+            #if exitapp:
+                #break
 
             # Get page from the server
             root = self.get_results()
@@ -122,8 +124,6 @@ class GelbooruDownloader(Booru, Thread):
                 print("End of results")
                 break
         print("Gelbooru: Finished searching")
-
-
     def run(self):
         print("Starting Gelbooru Thread")
         self.download()
