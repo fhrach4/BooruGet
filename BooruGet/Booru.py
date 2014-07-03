@@ -28,7 +28,7 @@ class Booru(object):
         self.target_width = arguments.target_width
         self.target_height = arguments.target_height
         self.error = arguments.error
-        self.any_size = arguments.anysize
+        self.any_size = arguments.any_size
 
 
 

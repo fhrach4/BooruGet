@@ -77,7 +77,6 @@ class DownloadManager(Thread):
         """
         Downloads
         """
-        print('Downloading ' + queued_file.url + '\tqueue length: ' + str(len(self.queue)))
         path = os.path.join(queued_file.destination, queued_file.file_name \
             + "." + queued_file.extension)
 

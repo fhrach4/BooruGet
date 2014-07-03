@@ -8,7 +8,6 @@ BooruGet
 import argparse
 import threading
 import os
-import platform
 import time
 
 import DownloadManager
@@ -162,12 +161,21 @@ def main():
                 #TODO write danbooru code
                 pass
 
+            # Start all threads
             print("Starting downloads")
             for thread in threads:
                 thread.start()
 
-        while threading.active_count() > 1:
-            time.sleep(0.1)
+            # remove the download thread
+            threads.pop(0)
+
+            # Wait for all threads to finish
+            for thread in threads:
+                print("join")
+                thread.join()
+
+            print("Main thread done")
+
     except (KeyboardInterrupt, SystemExit):
         dl_manager.should_run = False
         raise

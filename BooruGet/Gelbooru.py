@@ -32,6 +32,8 @@ class GelbooruDownloader(Booru, Thread):
     def __init__(self, args, download_manager):
         """
         """
+        Booru.__init__(self, args, download_manager)
+
         Thread.__init__(self)
 
         self.search_string = args.search_string
@@ -90,9 +92,7 @@ class GelbooruDownloader(Booru, Thread):
         # sleep to ensure we are not spamming the server
         time.sleep(0.2)
 
-        print(self.number_of_pages + 1)
         for i in range(0, self.number_of_pages + 1):
-            print( i )
 
             # Get page from the server
             root = self.get_results()
@@ -118,12 +118,15 @@ class GelbooruDownloader(Booru, Thread):
 
                     if self.image_filter.filter_result(image):
                         self.download_manager.enqueue_file(image, self.tags)
+
             except(IndexError):
-                print("End of results")
+                print("Unexpected End of results")
                 break
+
         print("Gelbooru: Finished searching")
 
 
     def run(self):
-        print("Starting Gelbooru Thread")
+        if self.verbose:
+            print("Starting Gelbooru Thread")
         self.download()
