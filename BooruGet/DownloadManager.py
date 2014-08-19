@@ -61,10 +61,10 @@ class DownloadManager(Thread):
         while self.should_run:
             if self.current_downloads <= self.max_downloads and \
                 len(self.queue) != 0:
+                self.current_downloads += 1
                 thread = Thread(target=self.download, \
                     args=(self.queue.pop(),self.event))
                 thread.start()
-                self.current_downloads += 1
             else:
                 # wait until download thread notifies all
                 self.event.wait()

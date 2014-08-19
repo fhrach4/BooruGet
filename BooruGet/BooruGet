@@ -395,7 +395,9 @@ def main():
 
         args = Arguments(arguments['anysize'], arguments['height'], \
                arguments['width'], arguments['error'], arguments['verbose'], \
-               arguments['nsfw'], arguments['search'])
+               arguments['nsfw'], arguments['search'], arguments['username'], \
+               arguments['apikey'])
+
 
         if args.verbose:
             print("Arguments:")

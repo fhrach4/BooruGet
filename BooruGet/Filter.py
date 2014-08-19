@@ -119,12 +119,12 @@ class Filter(object):
         # if the anysize argument is passed
         if (ratio >= min_ratio and ratio <= max_ratio) or \
             self.arguments.any_size:
-            if width <= min_width and height <= min_height:
-                fail = True
-                # TODO maybe add verbose message for failed size check
 
-            # if the anysize argument is used, auto-pass this check
-            if self.arguments.any_size:
+            # if the picture is larger than the target size, or any size is
+            # allowed, the image passes
+            fail = True
+            if width >= min_width and height >= min_height or \
+                self.arguments.any_size:
                 fail = False
 
             # if nfsw is not allowed, check the tag blacklist
