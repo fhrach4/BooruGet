@@ -33,7 +33,6 @@ class GelbooruDownloader(Booru, Thread):
         """
         """
         Booru.__init__(self, args, download_manager)
-
         Thread.__init__(self)
 
         self.search_string = args.search_string
@@ -105,7 +104,6 @@ class GelbooruDownloader(Booru, Thread):
 
             try:
                 for child in root:
-                    #TODO check to make sure result has data
                     image = {}
                     image["md5"] = child.attrib["md5"]
                     image["image_height"] = int(child.attrib["height"])
@@ -116,12 +114,15 @@ class GelbooruDownloader(Booru, Thread):
                         child.attrib["file_url"].split(".")[3]
                     image["url"] = child.attrib["file_url"]
 
-                    if self.image_filter.filter_result(image):
-                        self.download_manager.enqueue_file(image, self.tags)
 
+                    if self.image_filter.filter_result(image):
+                        print(image["md5"])
+                        self.download_manager.enqueue_file(image, self.tags)
             except(IndexError):
                 print("Unexpected End of results")
                 break
+
+            self.page_num += 1
 
         print("Gelbooru: Finished searching")
 
