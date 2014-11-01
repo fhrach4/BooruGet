@@ -82,6 +82,8 @@ class DanbooruDownloader(Booru, Thread):
         initial = self.get_results()
 
         for i in range(1, self.numper_of_pages + 1):
+
+            # sleep to ensure we are not spamming the server
             time.sleep(0.2)
 
             if self.verbose:
@@ -92,7 +94,7 @@ class DanbooruDownloader(Booru, Thread):
 
             # Handle case where there is no result
             if result is None or len(result) <= 0:
-                if arguments.verbose:
+                if self.verbose:
                     print("Breaking...")
                     if result is None:
                         print("\t result was NoneType")
@@ -127,14 +129,14 @@ class DanbooruDownloader(Booru, Thread):
                     i = numPages + 2
                     j = numPerPage
                     break
-                #except (KeyError):
-                    #if not os.path.exists("error.log"):
-                        #f = open("error.log", "w")
-                        #f.write('')
-                        #f.close()
-                    #f = open("error.log", 'w')
-                    #f.write(str(result[j]))
-                    #f.close()
+                except (KeyError):
+                    if not os.path.exists("error.log"):
+                        f = open("error.log", "w")
+                        f.write('')
+                        f.close()
+                    f = open("error.log", 'w')
+                    f.write(str(result[j]))
+                    f.close()
 
         print("Danbooru: Finished searching")
 

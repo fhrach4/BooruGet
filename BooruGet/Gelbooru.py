@@ -9,8 +9,11 @@ import Filter
 import httplib2
 import math
 import time
+import os
 import xml.etree.ElementTree as ET
+
 from threading import Thread
+from urllib.parse import urlparse 
 
 
 class GelbooruDownloader(Booru, Thread):
@@ -89,10 +92,9 @@ class GelbooruDownloader(Booru, Thread):
         self.number_of_pages = int(
             math.ceil(int(root.attrib["count"]) / float(len(root))))
 
-        # sleep to ensure we are not spamming the server
-        time.sleep(0.2)
-
         for i in range(0, self.number_of_pages + 1):
+            # sleep to ensure we are not spamming the server
+            time.sleep(0.2)
 
             # Get page from the server
             root = self.get_results()
@@ -111,8 +113,8 @@ class GelbooruDownloader(Booru, Thread):
                     image["image_width"] = int(child.attrib["width"])
                     image["rating"] = child.attrib["rating"]
                     image["tag_string"] = child.attrib["tags"]
-                    image["file_ext"] = \
-                        child.attrib["file_url"].split(".")[3]
+                    url = urlparse(child.attrib["file_url"]).path
+                    image["file_ext"] = (os.path.splitext(url)[1]).strip('.')
                     image["url"] = child.attrib["file_url"]
 
 
