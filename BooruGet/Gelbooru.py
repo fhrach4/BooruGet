@@ -32,6 +32,7 @@ class GelbooruDownloader(Booru, Thread):
     def __init__(self, args, download_manager):
         """
         """
+
         Booru.__init__(self, args, download_manager)
         Thread.__init__(self)
 
@@ -116,7 +117,8 @@ class GelbooruDownloader(Booru, Thread):
 
 
                     if self.image_filter.filter_result(image):
-                        print(image["md5"])
+                        if self.verbose:
+                            print(image["md5"])
                         self.download_manager.enqueue_file(image, self.tags)
             except(IndexError):
                 print("Unexpected End of results")

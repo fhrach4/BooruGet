@@ -1,23 +1,32 @@
 from Booru import Booru
 import Filter
 import httplib2
+import json
 import math
 import time
-from threading import thread
+import os
+from threading import Thread
 
 class DanbooruDownloader(Booru, Thread):
     """
+    Holds all the methods and data required to download files from Danbooru
+    utalizing it's public API. A Public API key is required which should be
+    provided throuhg the download_manager
     """
-    #TODO write docstring
 
+    page_num = 0
     number_per_page = 100
+    numper_of_pages = 1000
+
     urlbase = "http://danbooru.donmai.us/"
 
 
     def __init__(self, args, download_manager):
+        """
+        """
 
         Booru.__init__(self, args, download_manager)
-        Thread.__init__self(self)
+        Thread.__init__(self)
 
         self.search_string = args.search_string
         self.target_width = args.target_width
@@ -42,22 +51,23 @@ class DanbooruDownloader(Booru, Thread):
         Gets a page of results from the server
         """
         # create connection
-        if self.args.verbose:
+        if self.verbose:
             print("Danbooru: Reqesting page")
         try:
             connection = httplib2.Http(".cache")
             header = "posts.json?login=" + self.username + "&api_key=" + \
-                self.password + "&limit=" + str(numPerPage) + "&"
+                self.password + "&limit=" + str(self.number_per_page) + "&"
+
             # make request
-            if self.args.verbose:
-                print("Making request: " + self.urlbase + header + "tags=" + tags + \
-                    "&page=" + str(pageNum))
+            if self.verbose:
+                print("Making request: " + self.urlbase + header + "tags=" + self.tags + \
+                    "&page=" + str(self.page_num))
             res, content = connection.request(
-                url + header + "tags=" + tags + "&page=" + str(pageNum))
+                self.urlbase + header + "tags=" + self.tags + "&page=" + str(self.page_num))
             if len(content) >= 0 and res.status == 200:
-                if arguments.verbose:
+                if self.verbose:
                     print("Response recieved")
-                return json.loads(content)
+                return json.loads(content.decode())
             else:
                 return None
         except (httplib2.ServerNotFoundError):
@@ -69,14 +79,16 @@ class DanbooruDownloader(Booru, Thread):
 
     def download(self):
 
-        for i in range(1, numPages + 1):
+        initial = self.get_results()
+
+        for i in range(1, self.numper_of_pages + 1):
             time.sleep(0.2)
 
-            if self.args.verbose:
+            if self.verbose:
                 print("Danbooru: current page: " + str(i) + " of ~1000 (" + \
-                    str(i * numPerPage) + ")")
+                    str(i * self.number_per_page) + ")")
 
-            result = self.getResultsJSON()
+            result = self.get_results()
 
             # Handle case where there is no result
             if result is None or len(result) <= 0:
@@ -93,17 +105,20 @@ class DanbooruDownloader(Booru, Thread):
             for j in range(self.number_per_page):
                 try:
                     result[j]["md5"]
-                    if filterResult(result[j], tWidth, tHeight, error):
-                        image = {}
-                        image["md5"] = child.attrib["md5"]
-                        image["image_height"] = int(child.attrib["height"])
-                        image["image_width"] = int(child.attrib["width"])
-                        image["rating"] = child.attrib["rating"]
-                        image["tag_string"] = child.attrib["tags"]
-                        image["file_ext"] = result[j]["file_ext"]
-                        image["url"] =  self.urlbase + "/data/" + image["md5"] \
+
+                    image = {}
+                    image["md5"] = result[j]["md5"]
+                    image["image_height"] = int(result[j]["image_height"])
+                    image["image_width"] = int(result[j]["image_width"])
+                    image["rating"] = result[j]["rating"]
+                    image["tag_string"] = self.tags
+                    image["file_ext"] = result[j]["file_ext"]
+                    image["url"] =  self.urlbase + "/data/" + image["md5"] \
                             + "." + image["file_ext"]
 
+                    if self.image_filter.filter_result(image):
+                        if self.verbose:
+                            print(image)
                         self.download_manager.enqueue_file(image, self.tags)
 
                 except (IndexError, TypeError):
@@ -112,18 +127,18 @@ class DanbooruDownloader(Booru, Thread):
                     i = numPages + 2
                     j = numPerPage
                     break
-                except (KeyError):
-                    if not os.path.exists("error.log"):
-                        f = open("error.log", "w")
-                        f.write('')
-                        f.close()
-                    f = file("error.log", 'w')
-                    f.write(str(result))
-                    f.close()
+                #except (KeyError):
+                    #if not os.path.exists("error.log"):
+                        #f = open("error.log", "w")
+                        #f.write('')
+                        #f.close()
+                    #f = open("error.log", 'w')
+                    #f.write(str(result[j]))
+                    #f.close()
 
         print("Danbooru: Finished searching")
 
     def run(self):
         if self.verbose:
-            print("Starting Gelbooru Thread")
+            print("Starting Danbooru Thread")
         self.download()

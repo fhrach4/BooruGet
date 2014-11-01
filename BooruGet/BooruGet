@@ -13,6 +13,7 @@ import time
 import DownloadManager
 from arguments import Arguments
 from Gelbooru import GelbooruDownloader
+from Danbooru import DanbooruDownloader
 
 
 # file names
@@ -136,20 +137,23 @@ def main():
     The entry point for the program
     """
     global OUT_DIR
+    arguments = load_config_file()
+    arguments = handleArguments(arguments)
+
+    if arguments['height'] == -1 and arguments['width'] == -1:
+        arguments['anysize'] = True
+
+    args = Arguments(arguments['anysize'], arguments['height'], \
+           arguments['width'], arguments['error'], arguments['verbose'], \
+           arguments['nsfw'], arguments['search'], arguments['username'], \
+           arguments['apikey'])
+
+
+    if args.verbose:
+        print("Arguments:")
+        print('\n' + str(arguments))
+
     try:
-        arguments = load_config_file()
-        arguments = handleArguments(arguments)
-
-        args = Arguments(arguments['anysize'], arguments['height'], \
-               arguments['width'], arguments['error'], arguments['verbose'], \
-               arguments['nsfw'], arguments['search'], arguments['username'], \
-               arguments['apikey'])
-
-
-        if args.verbose:
-            print("Arguments:")
-            print('\n' + str(arguments))
-
         threads = []
         event = threading.Event()
         dl_manager = DownloadManager.DownloadManager(event, OUT_DIR)
@@ -161,8 +165,8 @@ def main():
                 gel = GelbooruDownloader(args, dl_manager)
                 threads.append(gel)
             if not arguments['nodan']:
-                #TODO write danbooru code
-                pass
+                dan = DanbooruDownloader(args, dl_manager)
+                threads.append(dan)
 
             # Start all threads
             print("Starting downloads")
