@@ -126,8 +126,8 @@ class DanbooruDownloader(Booru, Thread):
                 except (IndexError, TypeError):
                     print("Less than 100 images in this result ("\
                         + str(len(result)) + ")")
-                    i = numPages + 2
-                    j = numPerPage
+                    i = self.numper_of_pages + 2
+                    j = self.number_per_page
                     break
                 except (KeyError):
                     if not os.path.exists("error.log"):

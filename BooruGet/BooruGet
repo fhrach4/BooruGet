@@ -1,4 +1,5 @@
-#!/bin/python3
+#!/usr/bin/env python3
+##!/bin/python3
 """
 Frank Hrach
 BooruGet
@@ -8,7 +9,6 @@ BooruGet
 import argparse
 import threading
 import os
-import time
 
 import DownloadManager
 from arguments import Arguments
@@ -27,7 +27,6 @@ FILES = [
         ".config", "md5_global_whitelist"),
     os.path.join(".config", "_nsfw_md5")]
 
-# TODO switch this to load from the config file
 OUT_DIR = "src"
 
 # file content arrays
@@ -40,7 +39,7 @@ MD5_GLOBAL_WHITELISTLIST = []
 NSFW_MD5 = []
 
 
-def initDirectories():
+def init_directories(additional_dir_name):
     """
     Checks to see if the directories used by the program exist, and creates
     them if they do not
@@ -48,6 +47,9 @@ def initDirectories():
     global OUT_DIR
     if not os.path.exists(OUT_DIR):
         os.mkdir(OUT_DIR)
+
+    if not additional_dir_name == "":
+        os.mkdir(os.path.join(OUT_DIR, additional_dir_name))
 
 def load_config_file():
     """
@@ -80,7 +82,7 @@ def load_config_file():
     return valid_settings
 
 
-def handleArguments(arguments):
+def handle_arguments(arguments):
     """
     Handles the command line arguments for the program
 
@@ -138,7 +140,7 @@ def main():
     """
     global OUT_DIR
     arguments = load_config_file()
-    arguments = handleArguments(arguments)
+    arguments = handle_arguments(arguments)
 
     if arguments['height'] == -1 and arguments['width'] == -1:
         arguments['anysize'] = True
@@ -152,6 +154,8 @@ def main():
     if args.verbose:
         print("Arguments:")
         print('\n' + str(arguments))
+
+    init_directories(arguments['search'])
 
     try:
         threads = []
