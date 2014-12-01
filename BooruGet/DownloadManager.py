@@ -85,8 +85,24 @@ class DownloadManager(Thread):
         return not os.path.exists(path)
 
 
-    # TODO switch to a thread pool
-    def download(self, queued_file, event):
+
+class WorkerThread(Thread):
+    def __init__(self, event):
+        self.event = event
+        self.queued_file = ""
+        self.should_run = True
+        self.downloading = False
+
+    def run():
+        while(self.should_run):
+            if self.url != "":
+                self.event.wait()
+            else:
+                self.downloading = True;
+                download()
+                self.download = False;
+
+    def download(self):
         """
         Downloads the supplied file
         """
@@ -99,8 +115,3 @@ class DownloadManager(Thread):
         local_file = open(path, "wb")
         local_file.write(content)
         local_file.close()
-
-        # Notify the controller that we have finished
-        self.current_downloads  -= 1
-        print("Done")
-        event.set()
