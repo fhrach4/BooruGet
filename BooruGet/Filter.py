@@ -2,7 +2,7 @@
 A module for filtering out various images downloaded from a Booru based offf of
 tagging, rating, and size
 
-When declaring a new instance, the following arguments from program launch must
+When declaring a new instance, the following args from program launch must
 be provided in an argument:
     target_width:       The width of the desired picture size
     target_height:      The height of the desired picture size
@@ -29,9 +29,9 @@ class Filter(object):
         os.path.join(".config", "_nsfw_md5")]
 
 
-    def __init__(self, arguments):
+    def __init__(self, args):
         """
-        Arguments -> a dict of the arguments passed to the program
+        Arguments -> a dict of the args passed to the program
         """
         # TODO more detaild documentation
         self.nsfw_blacklist = []
@@ -47,7 +47,7 @@ class Filter(object):
             self.md5_global_blacklist, self.md5_nsfw_whitelist,
             self.md5_global_whitelist, self.nsfw_md5]
 
-        self.arguments = arguments
+        self.args = args
 
         self.load_black_and_white_lists()
 
@@ -91,14 +91,14 @@ class Filter(object):
         rating = result['rating']
         #search_string = result['tag_string'].split(" ")
 
-        min_width = self.arguments.target_width - \
-           self.arguments.target_width * self.arguments.error
-        min_height = self.arguments.target_height - \
-            self.arguments.target_height * self.arguments.error
+        min_width = self.args.target_width - \
+           self.args.target_width * self.args.error
+        min_height = self.args.target_height - \
+            self.args.target_height * self.args.error
 
         # maxHeight may not be used...
-        max_height = self.arguments.target_height + \
-            self.arguments.target_height * self.arguments.error
+        max_height = self.args.target_height + \
+            self.args.target_height * self.args.error
 
         fail = False
         mark_nsfw = False
@@ -110,33 +110,33 @@ class Filter(object):
 
         # calculate the ratio
         ratio = width / float(height)
-        tratio = self.arguments.target_width / float(self.arguments.target_height)
+        tratio = self.args.target_width / float(self.args.target_height)
 
-        max_ratio = tratio + tratio * self.arguments.error
-        min_ratio = tratio - tratio * self.arguments.error
+        max_ratio = tratio + tratio * self.args.error
+        min_ratio = tratio - tratio * self.args.error
 
         # check if the width and height are acceptable, or automatically pass
         # if the anysize argument is passed
         if (ratio >= min_ratio and ratio <= max_ratio) or \
-            self.arguments.any_size:
+            self.args.any_size:
 
             # if the picture is larger than the target size, or any size is
             # allowed, the image passes
             fail = True
             if width >= min_width and height >= min_height or \
-                self.arguments.any_size:
+                self.args.any_size:
                 fail = False
 
             # if nfsw is not allowed, check the tag blacklist
             for tag in self.nsfw_blacklist:
-                if tag in self.arguments.tag_String:
-                    if not self.arguments.nsfw:
+                if tag in result['tag_string']:
+                    if not self.args.nsfw:
                         fail = True
                     mark_nsfw = True
                     blacklisted_tag.append(tag)
 
             # check if md5 is blacklisted
-            if md5 in self.md5_nsfw_blacklist and not self.arguments.nsfw:
+            if md5 in self.md5_nsfw_blacklist and not self.args.nsfw:
                 fail = True
                 md5_fail = True
 
@@ -147,7 +147,7 @@ class Filter(object):
 
             # if nsfw is allowed or not allowed check the global blacklist
             for tag in self.global_blacklist:
-                if tag in self.arguments.search_string:
+                if tag in self.args.search_string:
                     fail = True
                     global_blacklisted_tag.append(tag)
 
@@ -157,9 +157,9 @@ class Filter(object):
 
             # if nsfw and rating is safe or if md5 was in the whitelist
             #return true
-            if(not(rating != "s" and not self.arguments.nsfw) and not fail) \
+            if(not(rating != "s" and not self.args.nsfw) and not fail) \
                 or md5_pass:
-                if self.arguments.verbose:
+                if self.args.verbose:
                     values = [True, rating, md5, md5_fail, md5_global_fail,
                               md5_pass, file_extension, blacklisted_tag,
                               global_blacklisted_tag, width, min_width, height,
@@ -169,33 +169,33 @@ class Filter(object):
                 # if the rating is not s and it is not already marked as nsfw,
                 # mark as nsfw
                 if (not rating == "s") and (not str(md5) in self.nsfw_md5):
-                    if self.arguments.verbose:
+                    if self.args.verbose:
                         print("\t\tmarking as nsfw")
                     self.nsfw_md5.append(str(md5))
                     self.update_md5_black_and_white_lists()
 
-                    if self.arguments.verbose:
+                    if self.args.verbose:
                         print("\t\tdone")
 
                 # otherwise go through each tag. If the tag is recognized as nsfw
                 elif mark_nsfw and (not str(md5) in self.nsfw_md5):
-                    if self.arguments.verbose:
+                    if self.args.verbose:
                         print("\t\tmarking as nsfw")
                     self.nsfw_md5.append(str(md5))
                     self.update_md5_black_and_white_lists()
 
-                    if self.arguments.verbose:
+                    if self.args.verbose:
                         print("\t\tdone")
                 return True
             else:
-                if self.arguments.verbose:
+                if self.args.verbose:
                     values = [False, rating, md5, md5_fail, md5_global_fail,
                               md5_pass, file_extension, blacklisted_tag,
                               global_blacklisted_tag, width, min_width, height,
                               max_height, ratio, min_ratio, max_ratio]
                     self.print_debug_message(values)
         else:
-            if self.arguments.verbose:
+            if self.args.verbose:
                 values = [False, rating, md5, md5_fail, md5_global_fail,
                           md5_pass, file_extension, blacklisted_tag,
                           global_blacklisted_tag, width, min_width, height,
@@ -254,9 +254,9 @@ class Filter(object):
             " (minumum: " + str(max_height) + ")")
         print("\tRatio: " + str(ratio) + "(minimum: " + str(min_ratio)\
             + " maximum: " + str(max_ratio) + ")")
-        print("\tnsfw allowed: " + str(self.arguments.nsfw))
+        print("\tnsfw allowed: " + str(self.args.nsfw))
         try:
-            print("\tTag String: " + str(self.arguments.search_string))
+            print("\tTag String: " + str(self.args.search_string))
         except UnicodeEncodeError:
             # TODO handle unicode Error
             pass
