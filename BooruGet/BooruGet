@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-##!/bin/python3
 """
 Frank Hrach
 BooruGet
@@ -48,7 +47,8 @@ def init_directories(additional_dir_name):
     if not os.path.exists(OUT_DIR):
         os.mkdir(OUT_DIR)
 
-    if not additional_dir_name == "":
+    if not additional_dir_name == "" and \
+        not os.path.exists(os.path.join(OUT_DIR, additional_dir_name)):
         os.mkdir(os.path.join(OUT_DIR, additional_dir_name))
 
 def load_config_file():
@@ -119,9 +119,6 @@ def handle_arguments(arguments):
         "--nsfw", help="Allow nsfw results, default is disallow",
         action="store_true")
     parser.add_argument(
-        "-l", "--localonly", help="Do not download, use local files only",
-        action="store_true")
-    parser.add_argument(
         "--nodan", help="Do not download from danbooru", action="store_true")
     parser.add_argument(
         "--nogel", help="Do not download from gelbooru",
@@ -150,47 +147,41 @@ def main():
            arguments['nsfw'], arguments['search'], arguments['username'], \
            arguments['apikey'])
 
-
-    if args.verbose:
-        print("Arguments:")
-        print('\n' + str(arguments))
-
     init_directories(arguments['search'])
 
     try:
         threads = []
         event = threading.Event()
         dl_manager = DownloadManager.DownloadManager(event, OUT_DIR)
+        threads.append(dl_manager)
 
-        if not arguments['localonly']:
-            threads.append(dl_manager)
+        if not arguments['nogel']:
+            gel = GelbooruDownloader(args, dl_manager)
+            threads.append(gel)
+        if not arguments['nodan']:
+            dan = DanbooruDownloader(args, dl_manager)
+            threads.append(dan)
 
-            if not arguments['nogel']:
-                gel = GelbooruDownloader(args, dl_manager)
-                threads.append(gel)
-            if not arguments['nodan']:
-                dan = DanbooruDownloader(args, dl_manager)
-                threads.append(dan)
+        # Start all threads
+        print("Starting downloads")
+        print(threads)
+        for thread in threads:
+            thread.start()
 
-            # Start all threads
-            print("Starting downloads")
-            for thread in threads:
-                thread.start()
+        # remove the download thread
+        dl_thread = threads.pop(0)
 
-            # remove the download thread
-            dl_thread = threads.pop(0)
+        # Wait for all threads to finish
+        for thread in threads:
+            thread.join()
 
-            # Wait for all threads to finish
-            for thread in threads:
-                thread.join()
+        print("Main thread done")
 
-            print("Main thread done")
+        if arguments['verbose']:
+            print("Sending shutdown message to download process")
 
-            if arguments['verbose']:
-                print("Sending shutdown message to download process")
-
-            dl_manager.should_run = False
-            dl_thread.join()
+        dl_manager.should_run = False
+        dl_thread.join()
 
 
     except (KeyboardInterrupt, SystemExit):

@@ -6,6 +6,7 @@ DownloadManager.py
 import httplib2
 import os
 import QueuedFile
+import time
 
 from threading import Thread
 
@@ -46,7 +47,6 @@ class DownloadManager(Thread):
 
         if self.should_download(image_to_apend):
             self.queue.append(image_to_apend)
-            self.event.set()
 
     def start_downloader(self):
         """
@@ -56,14 +56,13 @@ class DownloadManager(Thread):
 
         # run until main thread says it should no longer run
         while self.should_run:
-
             # if the queue is empty tell the thread to wait
             if len(self.queue) != 0 and self.thread_pool.can_downlaod():
                     self.thread_pool.assign_download(self.queue.pop())
             else:
-                # wait until download thread notifies all
-                #print("Wait", len(self.queue))
-                self.event.wait()
+                # check the queue every 5 seconds
+                time.sleep(5)
+        self.thread_pool.stop_all()
 
     def run(self):
         self.start_downloader()
@@ -113,6 +112,11 @@ class ThreadPool:
                 return True
         return False
 
+    def stop_all(self):
+        for thread in self.threads:
+            thread.should_run = False
+            self.event.set()
+
 class WorkerThread(Thread):
     """
     TODO write docstring
@@ -129,18 +133,14 @@ class WorkerThread(Thread):
         self.downloading = False
 
     def run(self):
-        print("starting dl thread")
         while self.should_run:
             if self.queued_file is None:
                 self.downloading = False
-                print(str(self.queued_file))
                 self.event.wait()
             else:
-                print("downloading")
                 self.downloading = True
                 self.download()
                 self.downloading = False
-                self.event.set()
 
     def download(self):
         """

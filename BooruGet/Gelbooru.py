@@ -13,7 +13,7 @@ import os
 import xml.etree.ElementTree as ET
 
 from threading import Thread
-from urllib.parse import urlparse 
+from urllib.parse import urlparse
 
 
 class GelbooruDownloader(Booru, Thread):
