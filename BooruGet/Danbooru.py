@@ -136,14 +136,19 @@ class DanbooruDownloader(Booru, Thread):
                     i = self.numper_of_pages + 2
                     j = self.number_per_page
                     break
-                except (KeyError):
+                except(KeyError, e):
                     if not os.path.exists("error.log"):
                         f = open("error.log", "w")
                         f.write('')
                         f.close()
                     f = open("error.log", 'w')
+                    f.write("Danbooru")
                     f.write(str(result[j]))
+                    f.write(e)
                     f.close()
+                    print("A key error has occured for Danbooru and the search on the site has been terminted")
+                    print("Please consider sending the results of error.txt to the developer")
+                    break
 
         print("Danbooru: Finished searching")
 

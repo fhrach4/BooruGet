@@ -118,8 +118,6 @@ def main():
     arg = load_config_file()
     arg = handle_arguments(arg)
 
-    print(arg['out_dir'])
-
     if arg['height'] == -1 and arg['width'] == -1:
         arg['anysize'] = True
 

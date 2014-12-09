@@ -126,6 +126,20 @@ class GelbooruDownloader(Booru, Thread):
                 print("Unexpected End of results")
                 break
 
+            except(KeyError, e):
+                if not os.path.exists("error.log"):
+                    f = open("error.log", "w")
+                    f.write('')
+                    f.close()
+                f = open("error.log", 'w')
+                f.write("Gelbooru")
+                f.write(str(result[j]))
+                f.write(e)
+                f.close()
+                print("A key error has occured for Gelbooru and the search on the site has been terminted")
+                print("Please consider sending the results of error.txt to the developer")
+                break
+
             self.page_num += 1
 
         print("Gelbooru: Finished searching")
