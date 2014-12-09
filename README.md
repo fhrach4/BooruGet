@@ -8,20 +8,20 @@ This project downlads files from danbooru and gelbooru. It can run on all operat
 BooruGet  will create all required files/folders on first run.
 
 ###Dependencies
-* python2.7
+* python3
 * httplib2
-* wget
 
 ##Configuration
 All configuration files are stored in .config
 
 ###BooruGet.config
-Currently there are only two settings.
-`username` and `apikey`
+Currently there are three settings
+`username`, `apikey`, and `out_dir`
 
 * Username is your username
 * Apikey is your apikey for Danbooru. If you do not have a danbooru account you can leave this blank and use `--nodan` to exclude danbooru from searches
  * Gelbooru does not require an api key
+* out_dir is the directory to output files to. Each search will create a directory with the name of the search as a folder. E.G. searching for test will put results in src/test
 
 ###Black and White List Configuration
 All files under this category should have each entry on it's own line.
@@ -74,4 +74,3 @@ By default, the program will ignore images that are smaller than the target size
 * GUI client for Windows and GTK
 * Better organization
 * Better README
-* Switch to python file download library from wget
