@@ -69,7 +69,7 @@ class DanbooruDownloader(Booru, Thread):
                     print("Response recieved")
                 return json.loads(content.decode())
             else:
-                return None
+                return res.status
         except (httplib2.ServerNotFoundError):
             print("Could not contact server at danbooru.donmai.us")
             print("Retrying in 30 seconds")
@@ -91,6 +91,13 @@ class DanbooruDownloader(Booru, Thread):
                     str(i * self.number_per_page) + ")")
 
             result = self.get_results()
+
+            # handle case where user has been throttled by the server
+            if result == 421:
+                print("You have been throttled by the server and can no longer download files")
+                print("This should end in one hour")
+
+                break
 
             # Handle case where there is no result
             if result is None or len(result) <= 0:

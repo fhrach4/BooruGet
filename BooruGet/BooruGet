@@ -10,33 +10,15 @@ import threading
 import os
 
 import DownloadManager
-from arguments import Arguments
+from arguments import arguments
 from Gelbooru import GelbooruDownloader
 from Danbooru import DanbooruDownloader
 
 
 # file names
 CONFIG = os.path.join(".config", "BooruGet.config")
-FILES = [
-    os.path.join(".config", "nsfw_blacklist"), os.path.join(
-        ".config", "global_blacklist"),
-    os.path.join(".config", "md5_nsfw_blacklist"), os.path.join(
-        ".config", "md5_global_blacklist"),
-    os.path.join(".config", "md5_nsfw_whitelist"), os.path.join(
-        ".config", "md5_global_whitelist"),
-    os.path.join(".config", "_nsfw_md5")]
 
 OUT_DIR = "src"
-
-# file content arrays
-NSFW_BLACKLIST = []
-GLOBAL_BLACKLIST = []
-MD5_NSFW_BLACKLIST = []
-MD5_GLOBAL_BLACKLIST = []
-MD5_NSFW_WHITELISTLIST = []
-MD5_GLOBAL_WHITELISTLIST = []
-NSFW_MD5 = []
-
 
 def init_directories(additional_dir_name):
     """
@@ -62,19 +44,20 @@ def load_config_file():
     if not os.path.exists(".config"):
         os.mkdir(".config")
 
-    valid_settings = {"username": None, "apikey": None}
+    valid_settings = {"username": None, "apikey": None, "out_dir": "src"}
 
     # if the config file does not exist, create it
     if not os.path.exists(CONFIG):
         f = open(CONFIG, "w")
-        f.write('username \n')
-        f.write('apikey ')
+        f.write('username:\n')
+        f.write('apikey:\n')
+        f.write('out_dir:')
         f.close()
 
     f = open(CONFIG, "r")
     try:
         for line in f:
-            current = line.strip().split(" ")
+            current = line.strip().split(":")
             valid_settings[current[0]] = current[1]
     except:
         #this is most likely not a problem
@@ -82,7 +65,7 @@ def load_config_file():
     return valid_settings
 
 
-def handle_arguments(arguments):
+def handle_arguments(arg):
     """
     Handles the command line arguments for the program
 
@@ -97,11 +80,11 @@ def handle_arguments(arguments):
         "Default is to only allow images equal to or larger than the " +
         "specified screen size", action="store_true")
     parser.add_argument(
-        "-u", "--username", default=arguments["username"],
+        "-u", "--username", default=arg["username"],
         help="The username you use to log into danbooru this overrides what " +
         "is found in the config file if specified")
     parser.add_argument(
-        "-k", "--apikey", default=arguments["apikey"],
+        "-k", "--apikey", default=arg["apikey"],
         help="Your api key can be found on your user page. This overrides " +
         "what is found in the config file if specified")
     parser.add_argument(
@@ -127,7 +110,7 @@ def handle_arguments(arguments):
         "search", help="the string to search for. It is the exact same " +
         "string that would be entered into the site")
 
-    return dict(list(arguments.items()) +
+    return dict(list(arg.items()) +
         list(vars(parser.parse_args()).items()))
 
 
@@ -136,18 +119,18 @@ def main():
     The entry point for the program
     """
     global OUT_DIR
-    arguments = load_config_file()
-    arguments = handle_arguments(arguments)
+    arg = load_config_file()
+    arg = handle_arguments(arg)
 
-    if arguments['height'] == -1 and arguments['width'] == -1:
-        arguments['anysize'] = True
+    if arg['height'] == -1 and arg['width'] == -1:
+        arg['anysize'] = True
 
-    args = Arguments(arguments['anysize'], arguments['height'], \
-           arguments['width'], arguments['error'], arguments['verbose'], \
-           arguments['nsfw'], arguments['search'], arguments['username'], \
-           arguments['apikey'])
+    args = arguments(arg['anysize'], arg['height'], \
+           arg['width'], arg['error'], arg['verbose'], \
+           arg['nsfw'], arg['search'], arg['username'], \
+           arg['apikey'])
 
-    init_directories(arguments['search'])
+    init_directories(arg['search'])
 
     try:
         threads = []
@@ -155,16 +138,15 @@ def main():
         dl_manager = DownloadManager.DownloadManager(event, OUT_DIR)
         threads.append(dl_manager)
 
-        if not arguments['nogel']:
+        if not arg['nogel']:
             gel = GelbooruDownloader(args, dl_manager)
             threads.append(gel)
-        if not arguments['nodan']:
+        if not arg['nodan']:
             dan = DanbooruDownloader(args, dl_manager)
             threads.append(dan)
 
         # Start all threads
         print("Starting downloads")
-        print(threads)
         for thread in threads:
             thread.start()
 
@@ -177,7 +159,7 @@ def main():
 
         print("Main thread done")
 
-        if arguments['verbose']:
+        if arg['verbose']:
             print("Sending shutdown message to download process")
 
         dl_manager.should_run = False

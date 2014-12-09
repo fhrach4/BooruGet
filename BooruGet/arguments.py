@@ -2,12 +2,11 @@
 Represents the arguments passed into the program
 """
 
-class Arguments(object):
+class arguments(object):
     """
     Class to hold the arguments specified in the config file and from the
     command line
     """
-
 
     def __init__(self, any_size, target_height, target_width, error, verbose, \
                 nsfw, search_string, username, password):
