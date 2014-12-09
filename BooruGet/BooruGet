@@ -18,20 +18,17 @@ from Danbooru import DanbooruDownloader
 # file names
 CONFIG = os.path.join(".config", "BooruGet.config")
 
-OUT_DIR = "src"
-
-def init_directories(additional_dir_name):
+def init_directories(additional_dir_name, out_dir):
     """
     Checks to see if the directories used by the program exist, and creates
     them if they do not
     """
-    global OUT_DIR
-    if not os.path.exists(OUT_DIR):
-        os.mkdir(OUT_DIR)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
 
     if not additional_dir_name == "" and \
-        not os.path.exists(os.path.join(OUT_DIR, additional_dir_name)):
-        os.mkdir(os.path.join(OUT_DIR, additional_dir_name))
+        not os.path.exists(os.path.join(out_dir, additional_dir_name)):
+        os.mkdir(os.path.join(out_dir, additional_dir_name))
 
 def load_config_file():
     """
@@ -118,9 +115,10 @@ def main():
     """
     The entry point for the program
     """
-    global OUT_DIR
     arg = load_config_file()
     arg = handle_arguments(arg)
+
+    print(arg['out_dir'])
 
     if arg['height'] == -1 and arg['width'] == -1:
         arg['anysize'] = True
@@ -130,12 +128,12 @@ def main():
            arg['nsfw'], arg['search'], arg['username'], \
            arg['apikey'])
 
-    init_directories(arg['search'])
+    init_directories(arg['search'], arg['out_dir'])
 
     try:
         threads = []
         event = threading.Event()
-        dl_manager = DownloadManager.DownloadManager(event, OUT_DIR)
+        dl_manager = DownloadManager.DownloadManager(event, arg['out_dir'])
         threads.append(dl_manager)
 
         if not arg['nogel']:
