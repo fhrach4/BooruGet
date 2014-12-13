@@ -136,7 +136,7 @@ class DanbooruDownloader(Booru, Thread):
                     i = self.numper_of_pages + 2
                     j = self.number_per_page
                     break
-                except(KeyError, e):
+                except KeyError as e:
                     if not os.path.exists("error.log"):
                         f = open("error.log", "w")
                         f.write('')

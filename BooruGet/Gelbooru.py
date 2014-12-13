@@ -126,7 +126,7 @@ class GelbooruDownloader(Booru, Thread):
                 print("Unexpected End of results")
                 break
 
-            except(KeyError, e):
+            except KeyError as e:
                 if not os.path.exists("error.log"):
                     f = open("error.log", "w")
                     f.write('')
