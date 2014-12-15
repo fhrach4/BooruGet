@@ -1,6 +1,6 @@
 #BooruGet
 ##About
-This project downlads files from danbooru and gelbooru. It can run on all operating systems, but requires wget to be in your path.
+This project downlads files from danbooru and gelbooru. It can run on all operating systems, but requires httplib2 to be installed. This is generally not installed on a default python3 install
 
 * This program is still very much in devlopment and is not very user friendly yet.
 
