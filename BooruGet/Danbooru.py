@@ -4,6 +4,7 @@ import httplib2
 import json
 import math
 import time
+import datetime
 import os
 from threading import Thread
 
@@ -141,10 +142,13 @@ class DanbooruDownloader(Booru, Thread):
                         f = open("error.log", "w")
                         f.write('')
                         f.close()
-                    f = open("error.log", 'w')
-                    f.write("Danbooru")
+                    f = open("error.log", 'a')
+                    f.write("Danbooru " + str(datetime.datetime.now()))
+                    f.write(" ~ ")
                     f.write(str(result[j]))
-                    f.write(e)
+                    f.write(" ~ ")
+                    f.write("KeyError:" +  str(e))
+                    f.write('\n')
                     f.close()
                     print("A key error has occured for Danbooru and the search on the site has been terminted")
                     print("Please consider sending the results of error.txt to the developer")

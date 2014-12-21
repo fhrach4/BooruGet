@@ -9,6 +9,7 @@ import Filter
 import httplib2
 import math
 import time
+import datetime
 import os
 import xml.etree.ElementTree as ET
 
@@ -132,9 +133,12 @@ class GelbooruDownloader(Booru, Thread):
                     f.write('')
                     f.close()
                 f = open("error.log", 'w')
-                f.write("Gelbooru")
+                f.write("Gelbooru " + str(datetime.datetime.now()))
+                f.write(" ~ ")
                 f.write(str(result[j]))
-                f.write(e)
+                f.write(" ~ ")
+                f.write("KeyError:" +  str(e))
+                f.write('\n')
                 f.close()
                 print("A key error has occured for Gelbooru and the search on the site has been terminted")
                 print("Please consider sending the results of error.txt to the developer")
