@@ -121,7 +121,7 @@ class GelbooruDownloader(Booru, Thread):
 
                     if self.image_filter.filter_result(image):
                         if self.verbose:
-                            print(image["md5"])
+                            print("Enqueing " + image["md5"])
                         self.download_manager.enqueue_file(image, self.tags)
             except(IndexError):
                 print("Unexpected End of results")

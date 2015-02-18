@@ -33,7 +33,6 @@ class DownloadManager(Thread):
         self.should_run = True
         self.event = event
         self.root = root
-        self.thread_pool = ThreadPool(4, event)
 
 
     def enqueue_file(self, image, destination):
@@ -55,14 +54,13 @@ class DownloadManager(Thread):
         """
 
         # run until main thread says it should no longer run
-        while self.should_run:
+        while self.should_run or len(self.queue) > 0:
             # if the queue is empty tell the thread to wait
-            if len(self.queue) != 0 and self.thread_pool.can_downlaod():
-                    self.thread_pool.assign_download(self.queue.pop())
+            if len(self.queue) != 0:
+                    self.download(self.queue.pop())
             else:
                 # check the queue every 5 seconds
                 time.sleep(5)
-        self.thread_pool.stop_all()
 
     def run(self):
         self.start_downloader()
@@ -77,82 +75,16 @@ class DownloadManager(Thread):
         return not os.path.exists(path)
 
 
-
-class ThreadPool:
-    """
-    TODO write docstring
-    """
-    threads = []
-    event = None
-
-    def __init__(self, num_threads, event):
-        for i in range(0,num_threads):
-            self.threads.append(WorkerThread(event))
-            self.event = event
-
-        for thread in self.threads:
-            thread.start()
-
-    def assign_download(self, q_file):
-        """
-        TODO write docstring
-        """
-        for thread in self.threads:
-            if not thread.downloading:
-                thread.queued_file = q_file
-                self.event.set()
-                break
-
-    def can_downlaod(self):
-        """
-        Returns if there is a free download thread to handle the download
-        """
-        for thread in self.threads:
-            if not thread.downloading:
-                return True
-        return False
-
-    def stop_all(self):
-        for thread in self.threads:
-            thread.should_run = False
-            self.event.set()
-
-class WorkerThread(Thread):
-    """
-    TODO write docstring
-    """
-    queued_file = None
-
-    def __init__(self, event):
-
-        Thread.__init__(self)
-
-        self.event = event
-        self.queued_file = None
-        self.should_run = True
-        self.downloading = False
-
-    def run(self):
-        while self.should_run:
-            if self.queued_file is None:
-                self.downloading = False
-                self.event.wait()
-            else:
-                self.downloading = True
-                self.download()
-                self.downloading = False
-
-    def download(self):
+    def download(self, queued_file):
         """
         Downloads the supplied file
         """
-        path = os.path.join(self.queued_file.destination, self.queued_file.file_name \
-            + "." + self.queued_file.extension)
+        path = os.path.join(queued_file.destination, queued_file.file_name \
+            + "." + queued_file.extension)
         connection = httplib2.Http(".cache")
 
-        request, content = connection.request(self.queued_file.url, "GET")
+        request, content = connection.request(queued_file.url, "GET")
 
         local_file = open(path, "wb+")
         local_file.write(content)
         local_file.close()
-        self.queued_file = None
